@@ -1,7 +1,7 @@
 Package: MAGEE
 Type: Package
-Version: 1.0.0
-Date: 2021-05-01
+Version: 1.0.1
+Date: 2021-09-07
 Title: Mixed Model Association Test for GEne-Environment Interaction
 Authors@R: c(person("Xinyu", "Wang", role = c("aut", "cre"), email = "xinyu.wang@uth.tmc.edu"),
              person("Han", "Chen", role = "aut", email = "han.chen.2@uth.tmc.edu"),
@@ -17,4 +17,4 @@ Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.2.0)
 NeedsCompilation: yes
-Packaged: 2021-05-01 22:38:39 UTC; xwang
+Packaged: 2021-09-07 22:38:39 UTC; xwang
