@@ -9,7 +9,8 @@ Use a glmmkin class object from the null GLMM to perform single variant main eff
 \usage{
 glmm.gei(null.obj, interaction, geno.file, outfile, bgen.samplefile = NULL, 
   interaction.covariates = NULL,  meta.output = F, center=T, MAF.range = c(1e-7, 0.5), 
-  miss.cutoff = 1, missing.method = "impute2mean", nperbatch=100, ncores = 1)
+  miss.cutoff = 1, missing.method = "impute2mean", nperbatch=100, ncores = 1,
+  verbose = FALSE)
 }
 \arguments{
   \item{null.obj}{
@@ -50,6 +51,9 @@ an integer for how many SNPs should be tested in a batch (default = 100). The co
 }
   \item{ncores}{
 a positive integer indicating the number of cores to be used in parallel computing (default = 1).
+}
+  \item{verbose}{
+a logical switch for whether failed matrix inversions should be written to \code{outfile}.err for debugging (default = FALSE).
 }
 }
 \value{

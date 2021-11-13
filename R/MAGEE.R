@@ -1,4 +1,4 @@
-MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep = "\t", bgen.samplefile = NULL, time = NULL, interaction.covariates = NULL, meta.file.prefix = NULL, MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, missing.method = "impute2mean", method = "davies", tests = "JF", use.minor.allele = FALSE, auto.flip = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1){
+MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep = "\t", bgen.samplefile = NULL, interaction.covariates = NULL, meta.file.prefix = NULL, MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, missing.method = "impute2mean", method = "davies", tests = "JF", use.minor.allele = FALSE, auto.flip = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1){
   if(Sys.info()["sysname"] == "Windows" && ncores > 1) {
     warning("The package doMC is not available on Windows... Switching to single thread...")
     ncores <- 1
@@ -71,12 +71,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       null.obj$Sigma_iX <- null.obj$Sigma_iX[match.id, , drop = FALSE]
       null.obj$Sigma_i <- null.obj$Sigma_i[match.id, match.id]
     }
-    if (!is.null(time)) {
-      time <- as.character(time)
-      strata <- apply(as.matrix(E[which(null.obj$X[,time] == min(null.obj$X[,time])),]), 1, paste, collapse = ":")
-    } else {
-      strata <- apply(E, 1, paste, collapse = ":")
-    }
+    strata <- apply(E, 1, paste, collapse = ":")
     strata <- if(length(unique(strata))>length(strata)/100) NULL else as.numeric(as.factor(strata)) 
     if(!is.null(strata)) strata.list <- lapply(unique(strata), function(x) which(strata==x)) 
     variant.idx <- SeqArray::seqGetData(gds, "variant.id")
@@ -95,8 +90,11 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     if (class(group.info) == "try-error") {
       stop("Error: cannot read group.file!")
     }
-    group.info <- group.info[!duplicated(paste(group.info$group, group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")), ]
     variant.id1 <- paste(group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")
+    is.duplicated <- duplicated(paste(group.info$group, variant.id1, sep = ":"))
+    group.info <- group.info[!is.duplicated, ]
+    variant.id1 <- variant.id1[!is.duplicated]
+    rm(is.duplicated)
     variant.idx1 <- variant.idx[match(variant.id1, variant.id)]
     group.info$variant.idx <- variant.idx1
     group.info$flip <- 0
@@ -174,6 +172,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           miss <- colMeans(is.na(geno))
           freq <- colMeans(geno, na.rm = TRUE)/2
           include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
+          if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
           if(!is.null(strata)) { # E is not continuous
             freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
             if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
@@ -197,7 +196,6 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
             miss.idx <- which(is.na(geno))
             geno[miss.idx] <- if(missing.method=="impute2mean") 2*freq[ceiling(miss.idx/nrow(geno))] else 0
           }
-          if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
           if(IV | IF | JV | JF | JD) {
             K <- do.call(cbind, sapply((1+qi):ncol(E), function(xx) geno*E[,xx], simplify = FALSE), envir = environment())
             SK <- as.vector(crossprod(K,residuals))
@@ -336,6 +334,10 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         if(JD) tmp.out$JD.pval <- JD.pval
         tmp.out
       }
+      if (class(geno.file)[1] == "SeqVarGDSClass") {
+    	SeqArray::seqClose(geno.file)
+      }
+      return(out)
     } else { # use a single core
       n.groups <- n.groups.all
       if (class(geno.file)[1] != "SeqVarGDSClass") {
@@ -377,6 +379,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         miss <- colMeans(is.na(geno))
         freq <- colMeans(geno, na.rm = TRUE)/2
         include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
+        if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
         if(!is.null(strata)) { # E is not continuous
           freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
           if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
@@ -400,7 +403,6 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           miss.idx <- which(is.na(geno))
           geno[miss.idx] <- if(missing.method=="impute2mean") 2*freq[ceiling(miss.idx/nrow(geno))] else 0
         }
-        if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
         if(IV | IF | JV | JF | JD) {
           K <- do.call(cbind, sapply((1+qi):ncol(E), function(xx) geno*E[,xx], simplify = FALSE), envir = environment())
           SK <- as.vector(crossprod(K,residuals))
@@ -577,12 +579,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       null.obj$Sigma_iX <- null.obj$Sigma_iX[match.id, , drop = FALSE]
       null.obj$Sigma_i <- null.obj$Sigma_i[match.id, match.id]
     }
-    if (!is.null(time)) {
-      time <- as.character(time)
-      strata <- apply(as.matrix(E[which(null.obj$X[,time] == min(null.obj$X[,time])),]), 1, paste, collapse = ":")
-    } else {
-      strata <- apply(E, 1, paste, collapse = ":")
-    }
+    strata <- apply(E, 1, paste, collapse = ":")
     strata <- if(length(unique(strata))>length(strata)/100) NULL else as.numeric(as.factor(strata))
     if(!is.null(strata)) {
       strata.list <- lapply(unique(strata), function(x) which(strata==x))
@@ -678,6 +675,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           miss <- colMeans(is.na(geno))
           freq <- colMeans(geno, na.rm = TRUE)/2
           include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
+          if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
           if(!is.null(strata)) { # E is not continuous
             freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
             if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
@@ -701,7 +699,6 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
             miss.idx <- which(is.na(geno))
             geno[miss.idx] <- if(missing.method=="impute2mean") 2*freq[ceiling(miss.idx/nrow(geno))] else 0
           }
-          if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
           if(IV | IF | JV | JF | JD) {
             K <- do.call(cbind, sapply((1+qi):ncol(E), function(xx) geno*E[,xx], simplify = FALSE), envir = environment())
             SK <- as.vector(crossprod(K,residuals))
@@ -879,6 +876,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         miss <- colMeans(is.na(geno))
         freq <- colMeans(geno, na.rm = TRUE)/2
         include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
+        if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
         if(!is.null(strata)) { # E is not continuous
           freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
           if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
@@ -902,7 +900,6 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           miss.idx <- which(is.na(geno))
           geno[miss.idx] <- if(missing.method=="impute2mean") 2*freq[ceiling(miss.idx/nrow(geno))] else 0
         }
-        if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
         if(IV | IF | JV | JF | JD) {
           K <- do.call(cbind, sapply((1+qi):ncol(E), function(xx) geno*E[,xx], simplify = FALSE), envir = environment())
           SK <- as.vector(crossprod(K,residuals))
@@ -1046,16 +1043,21 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
 
 .Q_pval <- function(Q, lambda, method = "davies") {
   if(method == "davies") {
-    tmp <- suppressWarnings(CompQuadForm::davies(q = Q, lambda = lambda, acc = 1e-6))
-    pval <- tmp$Qq
-    if((tmp$ifault > 0) | (pval <= 1e-5) | (pval >= 1)) method <- "kuonen"
+    tmp <- try(suppressWarnings(CompQuadForm::davies(q = Q, lambda = lambda, acc = 1e-6)))
+    if(class(tmp) == "try-error" || tmp$ifault > 0 || tmp$Qq <= 1e-5 || tmp$Qq >= 1) method <- "kuonen"
+    else return(tmp$Qq)
   }
   if(method == "kuonen") {
-    pval <- pKuonen(x = Q, lambda = lambda)
-    if(is.na(pval)) method <- "liu"
+    pval <- try(.pKuonen(x = Q, lambda = lambda))
+    if(class(pval) == "try-error" || is.na(pval)) method <- "liu"
+    else return(pval)
   }
-  if(method == "liu") pval <- CompQuadForm::liu(q = Q, lambda = lambda)
-  return(pval)
+  if(method == "liu") {
+    pval <- try(CompQuadForm::liu(q = Q, lambda = lambda))
+    if(class(pval) == "try-error") cat("Warning: method \"liu\" failed...\nQ:", Q, "\nlambda:", lambda, "\n")
+    else return(pval)
+  }
+  return(NA)
 }
 
 .quad_pval <- function(U, V, method = "davies") {
@@ -1066,7 +1068,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
   return(pval)
 }
 
-pKuonen<-function (x, lambda, delta = rep(0, length(lambda)), df = rep(1, length(lambda)))
+.pKuonen<-function (x, lambda, delta = rep(0, length(lambda)), df = rep(1, length(lambda)))
 {
   delta <- delta[lambda != 0]
   df <- df[lambda != 0]
@@ -1074,7 +1076,7 @@ pKuonen<-function (x, lambda, delta = rep(0, length(lambda)), df = rep(1, length
   if(length(lambda) != length(delta)) stop("Error: inconsistent length in lambda and delta!")
   if(length(lambda) != length(df)) stop("Error: inconsistent length in lambda and df!")
   if (length(lambda) == 1) {
-    pchisq(x/lambda, df = df, ncp = delta, lower.tail = FALSE)
+    return(pchisq(x/lambda, df = df, ncp = delta, lower.tail = FALSE))
   }
   d <- max(lambda)
   lambda <- lambda/d
@@ -1129,17 +1131,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   if(!grepl("\\.gds$", geno.file[1])) stop("Error: currently only .gds format is supported in geno.file for MAGEE.prep!")
   if(!class(null.obj) %in% c("glmmkin", "glmmkin.multi")) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
   n.pheno <- null.obj$n.pheno
-  if(any(duplicated(null.obj$id_include))) {
-    J <- Matrix(sapply(unique(null.obj$id_include), function(x) 1*(null.obj$id_include==x)), sparse = TRUE)
-    residuals <- as.numeric(as.matrix(crossprod(J, null.obj$scaled.residuals)))
-    if(!is.null(null.obj$P)) null.obj$P <- as.matrix(crossprod(J, crossprod(null.obj$P, J)))
-    else {
-      null.obj$Sigma_iX <- crossprod(J, null.obj$Sigma_iX)
-      null.obj$Sigma_i <- forceSymmetric(crossprod(J,crossprod(null.obj$Sigma_i,J)))
-      null.obj$Sigma_i <- Matrix(null.obj$Sigma_i, sparse = TRUE)
-    }
-    rm(J)
-  } else residuals <- null.obj$scaled.residuals
+  residuals <- null.obj$scaled.residuals
   n <- length(unique(null.obj$id_include))
   
   qi <- length(interaction.covariates) # number of covariates with interaction effects but we don't test
@@ -1165,7 +1157,6 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   }
   interaction <- as.character(interaction)
   n.E <- as.numeric(dim(E)[2]) # n.E = qi + ei
-  E <- scale(E, scale = FALSE)
   
   if (class(geno.file)[1] != "SeqVarGDSClass") {
     gds <- SeqArray::seqOpen(geno.file) 
@@ -1177,7 +1168,16 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   if(any(is.na(match(null.obj$id_include, sample.id)))) warning("Check your data... Some individuals in null.obj$id_include are missing in sample.id of geno.file!")
   sample.id <- sample.id[sample.id %in% null.obj$id_include]
   if(length(sample.id) == 0) stop("Error: null.obj$id_include does not match sample.id in geno.file!")
-  match.id <- match(sample.id, unique(null.obj$id_include))
+  if(any(duplicated(null.obj$id_include))) {
+    match.id <- null.obj$id_include %in% sample.id
+    null.obj$id_include <- null.obj$id_include[match.id]
+    J <- t(sparseMatrix(i=1:length(null.obj$id_include), j=match(null.obj$id_include, unique(null.obj$id_include)[match(sample.id, unique(null.obj$id_include))]), x=1))
+  } else {
+    match.id <- match(sample.id, null.obj$id_include)
+    J <- NULL
+  }
+  E <- as.matrix(E[match.id, , drop = FALSE])
+  E <- scale(E, scale = FALSE)
   if(class(null.obj) == "glmmkin.multi") {
     residuals <- residuals[match.id, , drop = FALSE]
     match.id <- rep(match.id, n.pheno) + rep((0:(n.pheno-1))*n, each = length(match.id))
@@ -1190,7 +1190,6 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
     null.obj$Sigma_iX <- null.obj$Sigma_iX[match.id, , drop = FALSE]
     null.obj$Sigma_i <- null.obj$Sigma_i[match.id, match.id]
   }
-  E <- as.matrix(E[match.id, , drop = FALSE])
   strata <- apply(E, 1, paste, collapse = ":")
   strata <- if(length(unique(strata))>length(strata)/100) NULL else as.numeric(as.factor(strata))
   if(!is.null(strata)) {
@@ -1214,8 +1213,11 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   if (class(group.info) == "try-error") {
     stop("Error: cannot read group.file!")
   }
-  group.info <- group.info[!duplicated(paste(group.info$group, group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")), ]
   variant.id1 <- paste(group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")
+  is.duplicated <- duplicated(paste(group.info$group, variant.id1, sep = ":"))
+  group.info <- group.info[!is.duplicated, ]
+  variant.id1 <- variant.id1[!is.duplicated]
+  rm(is.duplicated)
   variant.idx1 <- variant.idx[match(variant.id1, variant.id)]
   group.info$variant.idx <- variant.idx1
   group.info$flip <- 0
@@ -1226,10 +1228,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
     if(any(!is.na(variant.idx1) & !is.na(variant.idx2))) {
       tmp.dups <- which(!is.na(variant.idx1) & !is.na(variant.idx2))
       cat("The following ambiguous variants were found:\n")
-      cat("chr:", chr[tmp.dups], "\n")
-      cat("pos:", pos[tmp.dups], "\n")
-      cat("ref:", ref[tmp.dups], "\n")
-      cat("alt:", alt[tmp.dups], "\n")
+      cat("variant:", variant.id1[tmp.dups], "\n") 
       cat("Warning: both variants with alleles ref/alt and alt/ref were present at the same position and coding should be double checked!\nFor these variants, only those with alleles ref/alt were used in the analysis...\n")
       variant.idx2[tmp.dups] <- NA
       rm(tmp.dups)
@@ -1239,7 +1238,6 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
     rm(variant.id2, variant.idx2)
   }
   rm(variant.id, variant.id1, variant.idx1); gc()
-  #group.info$variant.idx <- variant.idx[match(group.info$variant, variant.id)]
   group.info <- subset(group.info, !is.na(variant.idx))
   groups <- unique(group.info$group)
   n.groups.all <- length(groups)
@@ -1247,12 +1245,12 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   group.info <- group.info[order(group.info$group.idx, group.info$variant.idx), ]
   group.idx.end <- findInterval(1:n.groups.all, group.info$group.idx)
   group.idx.start <- c(1, group.idx.end[-n.groups.all] + 1)
-  out <- list(null.obj = null.obj, E = E, geno.file = geno.file, group.file = group.file, group.file.sep = group.file.sep, strata = strata, strata.list = strata.list, auto.flip = auto.flip, residuals = residuals, sample.id = sample.id, group.info = group.info, groups = groups, group.idx.start = group.idx.start, group.idx.end = group.idx.end, ei = ei, qi = qi)
+  out <- list(null.obj = null.obj, E = E, geno.file = geno.file, group.file = group.file, group.file.sep = group.file.sep, J = J, strata = strata, strata.list = strata.list, auto.flip = auto.flip, residuals = residuals, sample.id = sample.id, group.info = group.info, groups = groups, group.idx.start = group.idx.start, group.idx.end = group.idx.end, ei = ei, qi = qi)
   class(out) <- "MAGEE.prep"
   return(out)
 }
 
-MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, missing.method = "impute2mean", method = "davies", tests = "JF", use.minor.allele = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1)
+MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NULL, MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, missing.method = "impute2mean", method = "davies", tests = "JF", use.minor.allele = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1)
 {
   if(class(MAGEE.prep.obj) != "MAGEE.prep") stop("Error: MAGEE.prep.obj must be a class MAGEE.prep object!")
   is.Windows <- Sys.info()["sysname"] == "Windows"
@@ -1262,7 +1260,9 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
   }
   null.obj <- MAGEE.prep.obj$null.obj
   E <- MAGEE.prep.obj$E
-  geno.file <- MAGEE.prep.obj$geno.file
+  if(is.null(geno.file)) {
+    geno.file <- MAGEE.prep.obj$geno.file
+  }
   residuals <- MAGEE.prep.obj$residuals
   sample.id <- MAGEE.prep.obj$sample.id
   group.info <- MAGEE.prep.obj$group.info
@@ -1270,6 +1270,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
   n.groups.all <- length(groups)
   group.idx.start <- MAGEE.prep.obj$group.idx.start
   group.idx.end <- MAGEE.prep.obj$group.idx.end
+  J <- MAGEE.prep.obj$J
   strata <- MAGEE.prep.obj$strata
   strata.list <- MAGEE.prep.obj$strata.list
   ei <- MAGEE.prep.obj$ei
@@ -1340,7 +1341,8 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
         miss <- colMeans(is.na(geno))
         freq <- colMeans(geno, na.rm = TRUE)/2
         include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
-        if(!is.null(strata)) { # E is not continuous
+	if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
+	if(!is.null(strata)) { # E is not continuous
           freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
           if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
           include <- include & !is.na(freq_strata[1,]) & !is.na(freq_strata[2,]) & freq_strata[1,] >= MAF.range[1] & freq_strata[2,] <= 1-MAF.range[1]
@@ -1496,6 +1498,10 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
       if(JD) tmp.out$JD.pval <- JD.pval
       tmp.out
     }
+    if (class(geno.file)[1] == "SeqVarGDSClass") {
+      SeqArray::seqClose(geno.file)
+    }
+    return(out)
   } else { # use a single core
     n.groups <- n.groups.all
     if (class(geno.file)[1] != "SeqVarGDSClass") {
@@ -1536,6 +1542,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
       miss <- colMeans(is.na(geno))
       freq <- colMeans(geno, na.rm = TRUE)/2
       include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
+      if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
       if(!is.null(strata)) { # E is not continuous
         freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
         if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
