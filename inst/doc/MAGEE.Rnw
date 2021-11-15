@@ -38,8 +38,8 @@ morekeywords={}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
-\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.0.0}
-\date{May 1, 2021}
+\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.0.1}
+\date{November 13, 2021}
 \author{Xinyu Wang\\Human Genetics Center\\Dept. of Biostatistics and Data Science\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Xinyu.Wang@uth.tmc.edu\\\\Han Chen\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\Center for Precision Health\\School of Biomedical Informatics\\The University of Texas Health Science Center at Houston\\Email: Han.Chen.2@uth.tmc.edu\\\\Duy Pham\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: duy.t.pham@uth.tmc.edu} 
 
 \maketitle
@@ -49,7 +49,7 @@ morekeywords={}
 \section{Introduction}
 \textit{MAGEE} is an R package for gene-environment interaction (GEI) tests and joint tests (testing the marginal genetic effects and GEI effects simultaneously) for genome-wide association studies (GWAS) and large-scale sequencing studies \cite{Wang2020}. Based on the generalized linear mixed models (GLMMs) \cite{Breslow1993}, the tests within the MAGEE framework are highly efficient. 
 
-For GWAS, \textit{MAGEE} performs single variant test score tests for GEI and joint effects. For rare variant analysis, \textit{MAGEE} performs group tests based on user-defined variant sets.  The group-based tests include two GEI tests and three joint tests: interaction variance component test (IV), interaction hybrid test using Fisher's method (IF), joint variance component test (JV), joint hybrid test using Fisher's method (JF), and joint hybrid test using double Fisher's procedures (JD). Before running \textit{MAGEE} for analyzing the data across the whole genome, a global null model that only accounts for covariates (not including genetic main effects) is fitted. The model should be fitted using the R package \href{https://cran.r-project.org/web/packages/GMMAT/index.html}{GMMAT} \cite{Chen2016}.
+For GWAS, \textit{MAGEE} performs single-variant tests for GEI and joint effects. For rare variant analysis, \textit{MAGEE} performs group tests based on user-defined variant sets.  The group-based tests include two GEI tests and three joint tests: interaction variance component test (IV), interaction hybrid test using Fisher's method (IF), joint variance component test (JV), joint hybrid test using Fisher's method (JF), and joint hybrid test using double Fisher's procedures (JD). Before running \textit{MAGEE} for analyzing the data across the whole genome, a global null model that only accounts for covariates (not including any genetic main effects) is fitted. The model should be fitted using the R package \href{https://cran.r-project.org/web/packages/GMMAT/index.html}{GMMAT} \cite{Chen2016}.
 
 \section{The model}
 \subsection{The full model}
@@ -95,7 +95,7 @@ install.packages(c("devtools", "RcppArmadillo", "CompQuadForm", "doMC",
         "foreach", "Matrix", "GMMAT", "BiocManager", "testthat"), 
 	repos = "https://cran.r-project.org/")
 BiocManager::install(c("SeqArray", "SeqVarTools"))
-devtools::install_github("https://github.com/xwang21/MAGEE")
+devtools::install_github("https://github.com/large-scale-gxe-methods/MAGEE")
 @
 
 \section{Input}
@@ -334,6 +334,13 @@ Initial public release of \textit{MAGEE}.
 \item Support BGEN file format in both \textbf{glmm.gei} and \textbf{MAGEE} functions.
 \item Allow adjustment for interaction covariates in both \textbf{glmm.gei} and \textbf{MAGEE} functions.
 \item Include a meta.output argument for \textbf{glmm.gei} to output additional summary statistics for the interaction terms.
+\end{enumerate}
+
+\subsection{Version 1.0.1 (November 13, 2021)}
+\begin{enumerate}
+\item Supported multiple phenotype analysis in \textbf{MAGEE}.
+\item Supported longitudinal data analysis in \textbf{glmm.gei} and \textbf{MAGEE}.
+\item Updated automatic tests for \textbf{glmm.gei} and \textbf{MAGEE}.
 \end{enumerate}
 
 

@@ -17,17 +17,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
   JF <- "JF" %in% tests
   JD <- "JD" %in% tests
   if(!class(interaction) %in% c("integer", "numeric", "character")) stop("Error: \"interaction\" should be an integer, numeric, or character vector.")
-  if(any(duplicated(null.obj$id_include))) {
-    J <- Matrix(sapply(unique(null.obj$id_include), function(x) 1*(null.obj$id_include==x)), sparse = TRUE)
-    residuals <- as.numeric(as.matrix(crossprod(J, null.obj$scaled.residuals)))
-    if(!is.null(null.obj$P)) null.obj$P <- as.matrix(crossprod(J, crossprod(null.obj$P, J)))
-    else {
-      null.obj$Sigma_iX <- crossprod(J, null.obj$Sigma_iX)
-      null.obj$Sigma_i <- forceSymmetric(crossprod(J,crossprod(null.obj$Sigma_i,J)))
-      null.obj$Sigma_i <- Matrix(null.obj$Sigma_i, sparse = TRUE)
-    }
-    rm(J)
-  } else residuals <- null.obj$scaled.residuals
+  residuals <- null.obj$scaled.residuals
   n <- length(unique(null.obj$id_include))
   qi <- length(interaction.covariates) # number of covariates with interaction effects but we don't test
   ei <- length(interaction) # number of covariates with interaction effects that we want to test
@@ -52,7 +42,6 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
   }
   interaction <- as.character(interaction)
   n.E <- as.numeric(dim(E)[2]) # n.E = qi + ei
-  E <- scale(E, scale = FALSE)
   if(grepl("\\.gds$", geno.file[1])){
     if (class(geno.file)[1] != "SeqVarGDSClass") {
       gds <- SeqArray::seqOpen(geno.file) 
@@ -63,8 +52,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     if(any(is.na(match(null.obj$id_include, sample.id)))) warning("Check your data... Some individuals in null.obj$id_include are missing in sample.id of geno.file!")
     sample.id <- sample.id[sample.id %in% null.obj$id_include]
     if(length(sample.id) == 0) stop("Error: null.obj$id_include does not match sample.id in geno.file!")
-    match.id <- match(sample.id, null.obj$id_include)
+    if(any(duplicated(null.obj$id_include))) {
+      match.id <- null.obj$id_include %in% sample.id
+      null.obj$id_include <- null.obj$id_include[match.id]
+      J <- t(sparseMatrix(i=1:length(null.obj$id_include), j=match(null.obj$id_include, unique(null.obj$id_include)[match(sample.id, unique(null.obj$id_include))]), x=1))
+    } else match.id <- match(sample.id, null.obj$id_include)
     E <- as.matrix(E[match.id, , drop = FALSE])
+    E <- scale(E, scale = FALSE)
     if(class(null.obj) == "glmmkin.multi") {
       residuals <- residuals[match.id, , drop = FALSE]
       match.id <- rep(match.id, n.pheno) + rep((0:(n.pheno-1))*n, each = length(match.id))
@@ -96,8 +90,11 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     if (class(group.info) == "try-error") {
       stop("Error: cannot read group.file!")
     }
-    group.info <- group.info[!duplicated(paste(group.info$group, group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")), ]
     variant.id1 <- paste(group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")
+    is.duplicated <- duplicated(paste(group.info$group, variant.id1, sep = ":"))
+    group.info <- group.info[!is.duplicated, ]
+    variant.id1 <- variant.id1[!is.duplicated]
+    rm(is.duplicated)
     variant.idx1 <- variant.idx[match(variant.id1, variant.id)]
     group.info$variant.idx <- variant.idx1
     group.info$flip <- 0
@@ -108,10 +105,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       if(any(!is.na(variant.idx1) & !is.na(variant.idx2))) {
         tmp.dups <- which(!is.na(variant.idx1) & !is.na(variant.idx2))
         cat("The following ambiguous variants were found:\n")
-        cat("chr:", chr[tmp.dups], "\n")
-        cat("pos:", pos[tmp.dups], "\n")
-        cat("ref:", ref[tmp.dups], "\n")
-        cat("alt:", alt[tmp.dups], "\n")
+        cat("variant:", variant.id1[tmp.dups], "\n") 
         cat("Warning: both variants with alleles ref/alt and alt/ref were present at the same position and coding should be double checked!\nFor these variants, only those with alleles ref/alt were used in the analysis...\n")
         variant.idx2[tmp.dups] <- NA
         rm(tmp.dups)
@@ -161,12 +155,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         if(JD) JD.pval <- rep(NA, n.groups)
         if(!is.null(meta.file.prefix)) {
           if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
+          if(!is.null(interaction.covariates)) stop("Error: meta-analysis not supported yet for interaction.covariates.")
           if(.Platform$endian!="little") stop("Error: platform must be little endian.")
           meta.file.score <- paste0(meta.file.prefix, ".score.", b)
           meta.file.cov <- paste0(meta.file.prefix, ".cov.", b)
-          write.table(t(c("group", "chr", "pos", "ref", "alt", "N", "missrate", "altfreq", "G.SCORE", paste("K.SCORE.", 1:n.E, sep=""))), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE)
+          write.table(t(c("group", "chr", "pos", "ref", "alt", "N", "missrate", "altfreq", "G.SCORE", paste("K.SCORE.", 1:ei, sep=""))), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE)
           meta.file.cov.handle <- file(meta.file.cov, "wb")
-          writeBin(n.E, meta.file.cov.handle, size = 4)
+          writeBin(as.numeric(ei), meta.file.cov.handle, size = 4)
           writeBin(interaction, meta.file.cov.handle, size = 4)
         }
         for(i in 1:n.groups) {
@@ -177,6 +172,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           miss <- colMeans(is.na(geno))
           freq <- colMeans(geno, na.rm = TRUE)/2
           include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
+          if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
           if(!is.null(strata)) { # E is not continuous
             freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
             if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
@@ -241,8 +237,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
             IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
           }
           if(!is.null(meta.file.prefix)) {
+            score <- cbind(tmp.group.info[,c("group","chr","pos","ref","alt")], N, miss, freq, U, matrix(crossprod(K,residuals), nrow = n.p, ncol = ei))
+            # odr <- order(as.numeric(row.names(tmp.group.info)))
+            # score <- score[odr, ]
+            # odr <- rep(odr, (1+ei))+rep(0:ei*length(odr), each=length(odr))
+            # COV <-rbind(cbind(V, t(KPG)), cbind(KPG, KPK))[odr, odr] 
             COV <-rbind(cbind(V, t(KPG)), cbind(KPG, KPK))
-            write.table(cbind(tmp.group.info[,c("group","chr","pos","ref","alt")], N, miss, freq, U, matrix(crossprod(K,residuals), nrow = n.p, ncol = n.E)), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE, append = TRUE)
+            write.table(score, meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE, append = TRUE)
             writeBin(COV[lower.tri(COV, diag = TRUE)], meta.file.cov.handle, size = 4)
           }
           if(use.minor.allele) {
@@ -333,6 +334,10 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         if(JD) tmp.out$JD.pval <- JD.pval
         tmp.out
       }
+      if (class(geno.file)[1] == "SeqVarGDSClass") {
+    	SeqArray::seqClose(geno.file)
+      }
+      return(out)
     } else { # use a single core
       n.groups <- n.groups.all
       if (class(geno.file)[1] != "SeqVarGDSClass") {
@@ -357,12 +362,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       if(JD) JD.pval <- rep(NA, n.groups)
       if(!is.null(meta.file.prefix)) {
         if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
+        if(!is.null(interaction.covariates)) stop("Error: meta-analysis not supported yet for interaction.covariates.")
         if(.Platform$endian!="little") stop("Error: platform must be little endian.")
         meta.file.score <- paste0(meta.file.prefix, ".score.1")
         meta.file.cov <- paste0(meta.file.prefix, ".cov.1")
-        write.table(t(c("group", "chr", "pos", "ref", "alt", "N", "missrate", "altfreq", "G.SCORE", paste("K.SCORE.", 1:n.E, sep=""))), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE)
+        write.table(t(c("group", "chr", "pos", "ref", "alt", "N", "missrate", "altfreq", "G.SCORE", paste("K.SCORE.", 1:ei, sep=""))), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE)
         meta.file.cov.handle <- file(meta.file.cov, "wb")
-        writeBin(n.E, meta.file.cov.handle, size = 4)
+        writeBin(as.numeric(ei), meta.file.cov.handle, size = 4)
         writeBin(interaction, meta.file.cov.handle, size = 4)
       }
       for(i in 1:n.groups) {
@@ -373,6 +379,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         miss <- colMeans(is.na(geno))
         freq <- colMeans(geno, na.rm = TRUE)/2
         include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
+        if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
         if(!is.null(strata)) { # E is not continuous
           freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
           if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
@@ -437,8 +444,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
         }
         if(!is.null(meta.file.prefix)) {
+          score <- cbind(tmp.group.info[,c("group","chr","pos","ref","alt")], N, miss, freq, U, matrix(crossprod(K,residuals), nrow = n.p, ncol = ei))
+          # odr <- order(as.numeric(row.names(tmp.group.info)))
+          # score <- score[odr, ]
+          # odr <- rep(odr, (1+ei))+rep(0:ei*length(odr), each=length(odr))
+          # COV <-rbind(cbind(V, t(KPG)), cbind(KPG, KPK))[odr, odr] 
           COV <-rbind(cbind(V, t(KPG)), cbind(KPG, KPK))
-          write.table(cbind(tmp.group.info[,c("group","chr","pos","ref","alt")], N, miss, freq, U, matrix(crossprod(K,residuals), nrow = n.p, ncol = n.E)), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE, append = TRUE)
+          write.table(score, meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE, append = TRUE)
           writeBin(COV[lower.tri(COV, diag = TRUE)], meta.file.cov.handle, size = 4)
         }
         if(use.minor.allele) {
@@ -530,7 +542,6 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     }
     return(out[match(groups, out$group),])
   } else if (grepl("\\.bgen$", geno.file)) {
-    
     bgenInfo <- .Call('bgenHeader', geno.file)
     if (bgenInfo$SampleIdFlag == 0) {
       if (is.null(bgen.samplefile)) {
@@ -549,8 +560,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     select[is.na(select)] <- 0
     sample.id <- sample.id[sample.id %in% null.obj$id_include]
     if(length(sample.id) == 0) stop("Error: null.obj$id_include does not match sample.id in geno.file!")
-    match.id <- match(sample.id, null.obj$id_include)
+    if(any(duplicated(null.obj$id_include))) {
+      match.id <- null.obj$id_include %in% sample.id
+      null.obj$id_include <- null.obj$id_include[match.id]
+      J <- t(sparseMatrix(i=1:length(null.obj$id_include), j=match(null.obj$id_include, unique(null.obj$id_include)[match(sample.id, unique(null.obj$id_include))]), x=1))
+    } else match.id <- match(sample.id, null.obj$id_include)
     E <- as.matrix(E[match.id, , drop = FALSE])
+    E <- scale(E, scale = FALSE)
     if(class(null.obj) == "glmmkin.multi") {
       residuals <- residuals[match.id, , drop = FALSE]
       match.id <- rep(match.id, n.pheno) + rep((0:(n.pheno-1))*n, each = length(match.id))
@@ -590,10 +606,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       if(any(!is.na(variant.idx1) & !is.na(variant.idx2))) {
         tmp.dups <- which(!is.na(variant.idx1) & !is.na(variant.idx2))
         cat("The following ambiguous variants were found:\n")
-        cat("chr:", chr[tmp.dups], "\n")
-        cat("pos:", pos[tmp.dups], "\n")
-        cat("ref:", ref[tmp.dups], "\n")
-        cat("alt:", alt[tmp.dups], "\n")
+        cat("variant:", variant.id1[tmp.dups], "\n")
         cat("Warning: both variants with alleles ref/alt and alt/ref were present at the same position and coding should be double checked!\nFor these variants, only those with alleles ref/alt were used in the analysis...\n")
         variant.idx2[tmp.dups] <- NA
         rm(tmp.dups)
@@ -611,215 +624,218 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     group.info <- group.info[order(group.info$group.idx, group.info$variant.idx), ]
     group.idx.end <- findInterval(1:n.groups.all, group.info$group.idx)
     group.idx.start <- c(1, group.idx.end[-n.groups.all] + 1)
-    
     if (ncores > n.groups.all) {
       ncores <- n.groups.all
       print(paste0("Warning: number of cores (", ncores,") is greater than number of groups (", n.groups.all,"). Using ", ncores, " instead."))
     }
-      
     ncores <- min(c(ncores, parallel::detectCores(logical = TRUE)))
     if(ncores > 1) {
-        doMC::registerDoMC(cores = ncores)
-        n.groups.percore <- (n.groups.all-1) %/% ncores + 1
-        n.groups.percore_1 <- n.groups.percore * ncores - n.groups.all
-        b <- NULL
-        out <- foreach(b=1:ncores, .combine=rbind, .multicombine = TRUE, .inorder=FALSE, .options.multicore = list(preschedule = FALSE, set.seed = FALSE)) %dopar% {
-          idx <- if(b <= n.groups.percore_1) ((b-1)*(n.groups.percore-1)+1):(b*(n.groups.percore-1)) else (n.groups.percore_1*(n.groups.percore-1)+(b-n.groups.percore_1-1)*n.groups.percore+1):(n.groups.percore_1*(n.groups.percore-1)+(b-n.groups.percore_1)*n.groups.percore)
-          n.groups <- length(idx)
-          n.variants <- rep(0,n.groups)
-          miss.min <- rep(NA,n.groups)
-          miss.mean <- rep(NA, n.groups)
-          miss.max <- rep(NA, n.groups)
-          freq.min <- rep(NA, n.groups)
-          freq.mean <- rep(NA, n.groups)
-          freq.max <- rep(NA, n.groups)
-          freq.strata.min <- rep(NA, n.groups)
-          freq.strata.max <- rep(NA, n.groups)
-          if(MV | JV) MV.pval <- rep(NA, n.groups)
-          if(IV | JV) IV.pval <- rep(NA, n.groups)
-          if(JV) JV.pval <- rep(NA, n.groups)
-          if(MF | JF | JD) MF.pval <- rep(NA, n.groups)
-          if(IF | JF | JD) IF.pval <- rep(NA, n.groups)
-          if(JF) JF.pval <- rep(NA, n.groups)
-          if(JD) JD.pval <- rep(NA, n.groups)
-          if(!is.null(meta.file.prefix)) {
-            if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
-            if(.Platform$endian!="little") stop("Error: platform must be little endian.")
-            meta.file.score <- paste0(meta.file.prefix, ".score.", b)
-            meta.file.cov <- paste0(meta.file.prefix, ".cov.", b)
-            write.table(t(c("group", "chr", "pos", "ref", "alt", "N", "missrate", "altfreq", "G.SCORE", paste("K.SCORE.", 1:n.E, sep=""))), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE)
-            meta.file.cov.handle <- file(meta.file.cov, "wb")
-            writeBin(n.E, meta.file.cov.handle, size = 4)
-            writeBin(interaction, meta.file.cov.handle, size = 4)
+      doMC::registerDoMC(cores = ncores)
+      n.groups.percore <- (n.groups.all-1) %/% ncores + 1
+      n.groups.percore_1 <- n.groups.percore * ncores - n.groups.all
+      b <- NULL
+      out <- foreach(b=1:ncores, .combine=rbind, .multicombine = TRUE, .inorder=FALSE, .options.multicore = list(preschedule = FALSE, set.seed = FALSE)) %dopar% {
+        idx <- if(b <= n.groups.percore_1) ((b-1)*(n.groups.percore-1)+1):(b*(n.groups.percore-1)) else (n.groups.percore_1*(n.groups.percore-1)+(b-n.groups.percore_1-1)*n.groups.percore+1):(n.groups.percore_1*(n.groups.percore-1)+(b-n.groups.percore_1)*n.groups.percore)
+        n.groups <- length(idx)
+        n.variants <- rep(0,n.groups)
+        miss.min <- rep(NA,n.groups)
+        miss.mean <- rep(NA, n.groups)
+        miss.max <- rep(NA, n.groups)
+        freq.min <- rep(NA, n.groups)
+        freq.mean <- rep(NA, n.groups)
+        freq.max <- rep(NA, n.groups)
+        freq.strata.min <- rep(NA, n.groups)
+        freq.strata.max <- rep(NA, n.groups)
+        if(MV | JV) MV.pval <- rep(NA, n.groups)
+        if(IV | JV) IV.pval <- rep(NA, n.groups)
+        if(JV) JV.pval <- rep(NA, n.groups)
+        if(MF | JF | JD) MF.pval <- rep(NA, n.groups)
+        if(IF | JF | JD) IF.pval <- rep(NA, n.groups)
+        if(JF) JF.pval <- rep(NA, n.groups)
+        if(JD) JD.pval <- rep(NA, n.groups)
+        if(!is.null(meta.file.prefix)) {
+          if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
+          if(!is.null(interaction.covariates)) stop("Error: meta-analysis not supported yet for interaction.covariates.")
+          if(.Platform$endian!="little") stop("Error: platform must be little endian.")
+          meta.file.score <- paste0(meta.file.prefix, ".score.", b)
+          meta.file.cov <- paste0(meta.file.prefix, ".cov.", b)
+          write.table(t(c("group", "chr", "pos", "ref", "alt", "N", "missrate", "altfreq", "G.SCORE", paste("K.SCORE.", 1:ei, sep=""))), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE)
+          meta.file.cov.handle <- file(meta.file.cov, "wb")
+          writeBin(as.numeric(ei), meta.file.cov.handle, size = 4)
+          writeBin(interaction, meta.file.cov.handle, size = 4)
+        }
+        for(i in 1:n.groups) {
+          tmp.idx <- group.idx.start[idx[i]]:group.idx.end[idx[i]]
+          tmp.group.info <- group.info[tmp.idx, , drop = FALSE]
+          if (bgenInfo$Layout == 2) {
+            geno <- .Call("magee_bgen13", geno.file, tmp.group.info$variant.idx, ptr, select, bgenInfo$Compression, n)
+          } else {
+            geno <- .Call("magee_bgen11", geno.file, tmp.group.info$variant.idx, ptr, select, bgenInfo$Compression, bgenInfo$N, n)
           }
-          for(i in 1:n.groups) {
-            tmp.idx <- group.idx.start[idx[i]]:group.idx.end[idx[i]]
-            tmp.group.info <- group.info[tmp.idx, , drop = FALSE]
-            if (bgenInfo$Layout == 2) {
-              geno <- .Call("magee_bgen13", geno.file, tmp.group.info$variant.idx, ptr, select, bgenInfo$Compression, n)
-            } else {
-              geno <- .Call("magee_bgen11", geno.file, tmp.group.info$variant.idx, ptr, select, bgenInfo$Compression, bgenInfo$N, n)
-            }
-            miss <- colMeans(is.na(geno))
-            freq <- colMeans(geno, na.rm = TRUE)/2
-            include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
-            if(!is.null(strata)) { # E is not continuous
-              freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
-              if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
-              include <- include & !is.na(freq_strata[1,]) & !is.na(freq_strata[2,]) & freq_strata[1,] >= MAF.range[1] & freq_strata[2,] <= 1-MAF.range[1]
-              rm(freq.tmp)
-            }
-            n.p <- sum(include)
-            if(n.p == 0) next
-            tmp.group.info <- tmp.group.info[include, , drop = FALSE]
-            miss <- miss[include]
-            freq <- freq[include]
-            geno <- geno[, include, drop = FALSE]
-            if(!is.null(strata)) freq_strata <- freq_strata[, include, drop = FALSE]
-            N <- nrow(geno) - colSums(is.na(geno))
-            if(sum(tmp.group.info$flip) > 0) {
-              freq[tmp.group.info$flip==1] <- 1 - freq[tmp.group.info$flip==1]
-              geno[, tmp.group.info$flip==1] <- 2 - geno[, tmp.group.info$flip==1]
-              if(!is.null(strata)) freq_strata[, tmp.group.info$flip==1] <- 1 - freq_strata[, tmp.group.info$flip==1]
-            }
-            if(max(miss)>0) {
-              miss.idx <- which(is.na(geno))
-              geno[miss.idx] <- if(missing.method=="impute2mean") 2*freq[ceiling(miss.idx/nrow(geno))] else 0
-            }
-            if(IV | IF | JV | JF | JD) {
-              K <- do.call(cbind, sapply((1+qi):ncol(E), function(xx) geno*E[,xx], simplify = FALSE), envir = environment())
-              SK <- as.vector(crossprod(K,residuals))
-            }
-            if(!is.null(interaction.covariates) && (IV | IF | JV | JF | JD)) {
-              geno <- cbind(geno, do.call(cbind, sapply(1:qi, function(xx) geno*E[,xx], simplify = FALSE), envir = environment()))
-            }
-            U <- as.vector(crossprod(geno, residuals))
-            if(class(null.obj) == "glmmkin.multi") {
-              geno <- Diagonal(n = n.pheno) %x% geno
-              if (IV | IF | JV | JF | JD) K <- Diagonal(n = n.pheno) %x% K
-            }
+          miss <- colMeans(is.na(geno))
+          freq <- colMeans(geno, na.rm = TRUE)/2
+          include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
+          if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
+          if(!is.null(strata)) { # E is not continuous
+            freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
+            if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
+            include <- include & !is.na(freq_strata[1,]) & !is.na(freq_strata[2,]) & freq_strata[1,] >= MAF.range[1] & freq_strata[2,] <= 1-MAF.range[1]
+            rm(freq.tmp)
+          }
+          n.p <- sum(include)
+          if(n.p == 0) next
+          tmp.group.info <- tmp.group.info[include, , drop = FALSE]
+          miss <- miss[include]
+          freq <- freq[include]
+          geno <- geno[, include, drop = FALSE]
+          if(!is.null(strata)) freq_strata <- freq_strata[, include, drop = FALSE]
+          N <- nrow(geno) - colSums(is.na(geno))
+          if(sum(tmp.group.info$flip) > 0) {
+            freq[tmp.group.info$flip==1] <- 1 - freq[tmp.group.info$flip==1]
+            geno[, tmp.group.info$flip==1] <- 2 - geno[, tmp.group.info$flip==1]
+            if(!is.null(strata)) freq_strata[, tmp.group.info$flip==1] <- 1 - freq_strata[, tmp.group.info$flip==1]
+          }
+          if(max(miss)>0) {
+            miss.idx <- which(is.na(geno))
+            geno[miss.idx] <- if(missing.method=="impute2mean") 2*freq[ceiling(miss.idx/nrow(geno))] else 0
+          }
+          if(IV | IF | JV | JF | JD) {
+            K <- do.call(cbind, sapply((1+qi):ncol(E), function(xx) geno*E[,xx], simplify = FALSE), envir = environment())
+            SK <- as.vector(crossprod(K,residuals))
+          }
+          if(!is.null(interaction.covariates) && (IV | IF | JV | JF | JD)) {
+            geno <- cbind(geno, do.call(cbind, sapply(1:qi, function(xx) geno*E[,xx], simplify = FALSE), envir = environment()))
+          }
+          U <- as.vector(crossprod(geno, residuals))
+          if(class(null.obj) == "glmmkin.multi") {
+            geno <- Diagonal(n = n.pheno) %x% geno
+            if (IV | IF | JV | JF | JD) K <- Diagonal(n = n.pheno) %x% K
+          }
+          if(!is.null(null.obj$P)) {
+            PG <- crossprod(null.obj$P, geno)
+          } else {
+            GSigma_iX <- crossprod(geno, null.obj$Sigma_iX)
+            PG <- crossprod(null.obj$Sigma_i, geno) - tcrossprod(null.obj$Sigma_iX, tcrossprod(GSigma_iX, null.obj$cov))
+          }
+          V <- as.matrix(crossprod(geno, PG))
+          if(MV | MF | JV | JF | JD) c1 <- rep(1:n.p,n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p) # index for GPG and row.index for GPC
+          if(!is.null(interaction.covariates) && (JV | JF | JD)) {
+            c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
+            CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
+            if(class(CPC_i)[1] == "try-error") CPC_i <- MASS::ginv(solve(V[c2,c2]))
+            U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
+            V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
+          }
+          if(IV | IF | JV | JF | JD) {
             if(!is.null(null.obj$P)) {
-              PG <- crossprod(null.obj$P, geno)
+              KPK <- crossprod(K,crossprod(null.obj$P,K))
             } else {
-              GSigma_iX <- crossprod(geno, null.obj$Sigma_iX)
-              PG <- crossprod(null.obj$Sigma_i, geno) - tcrossprod(null.obj$Sigma_iX, tcrossprod(GSigma_iX, null.obj$cov))
+              KSigma_iX <- crossprod(K, null.obj$Sigma_iX)
+              KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
             }
-            V <- as.matrix(crossprod(geno, PG))
-            if(MV | MF | JV | JF | JD) c1 <- rep(1:n.p,n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p) # index for GPG and row.index for GPC
-            if(!is.null(interaction.covariates) && (JV | JF | JD)) {
-              c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
-              CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-              if(class(CPC_i)[1] == "try-error") CPC_i <- MASS::ginv(solve(V[c2,c2]))
-              U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
-              V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
-            }
-            if(IV | IF | JV | JF | JD) {
-              if(!is.null(null.obj$P)) {
-                KPK <- crossprod(K,crossprod(null.obj$P,K))
-              } else {
-                KSigma_iX <- crossprod(K, null.obj$Sigma_iX)
-                KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
-              }
-              V_i <- try(solve(V), silent = TRUE)
-              if(class(V_i)[1] == "try-error") V_i <- MASS::ginv(V)
-              KPG <- crossprod(K,PG)
-              IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
-              IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
-            }
-            if(!is.null(meta.file.prefix)) {
-              COV <-rbind(cbind(V, t(KPG)), cbind(KPG, KPK))
-              write.table(cbind(tmp.group.info[,c("group","chr","pos","ref","alt")], N, miss, freq, U, matrix(crossprod(K,residuals), nrow = n.p, ncol = n.E)), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE, append = TRUE)
-              writeBin(COV[lower.tri(COV, diag = TRUE)], meta.file.cov.handle, size = 4)
-            }
-            if(use.minor.allele) {
-              tmp.group.info$weight[freq > 0.5] <- -tmp.group.info$weight[freq > 0.5]
-              if(!is.null(strata)) freq_strata[, freq > 0.5] <- 1 - freq_strata[, freq > 0.5]
-              freq[freq > 0.5] <- 1 - freq[freq > 0.5]
-            }
-            weights <- rep(tmp.group.info$weight * MAF.weights.beta.fun(freq, MAF.weights.beta[1], MAF.weights.beta[2]), n.pheno)
-            n.variants[i] <- n.p
-            miss.min[i] <- min(miss)
-            miss.mean[i] <- mean(miss)
-            miss.max[i] <- max(miss)
-            freq.min[i] <- min(freq)
-            freq.mean[i] <- mean(freq)
-            freq.max[i] <- max(freq)
-            if(!is.null(strata)) {
-              freq.strata.min[i] <- min(freq_strata)
-              freq.strata.max[i] <- max(freq_strata)
-            }
-            if(MV | MF | JV | JF | JD) {
-              U <- U[c1]*weights
-              V <- t(V[c1,c1]*weights)*weights
-            }
-            if(!is.null(interaction.covariates) && (JV | JF | JD)) {
-              U.adj <- U.adj*weights
-              V.adj <- t(V.adj*weights)*weights
-            }
-            if(IV | IF | JV | JF | JD) {
-              IV.U <- IV.U*rep(weights, ei)
-              IV.V <- t(IV.V*rep(weights, ei))*rep(weights, ei)
-            }
-            if(MV | JV) MV.pval[i] <- tryCatch(.quad_pval(U = U, V = V, method = method), error = function(e) { NA })
-            if(IV | JV) IV.pval[i] <- tryCatch(.quad_pval(U = IV.U, V = IV.V, method = method), error = function(e) { NA })
-            if(JV && is.null(interaction.covariates)) JV.pval[i] <- tryCatch(fisher_pval(c(MV.pval[i], IV.pval[i])), error = function(e) { MV.pval[i] })
-            if(JV && !is.null(interaction.covariates)) {
-              MV.adj.pval <- tryCatch(.quad_pval(U = U.adj, V = V.adj, method = method), error = function(e) { NA })
-              JV.pval[i] <- tryCatch(fisher_pval(c(MV.adj.pval, IV.pval[i])), error = function(e) { MV.adj.pval })
-            }
-            if(MF | JF | JD) {
-              MF.BU <- sum(U)
-              MF.BV <- sum(V)
-              MF.Bp <- pchisq(MF.BU^2/MF.BV,df=1,lower.tail=FALSE)
-              V.rowSums <- rowSums(V)
-              MF.U <- U - V.rowSums * MF.BU / MF.BV
-              MF.V <- V - tcrossprod(V.rowSums) / MF.BV
-              if(MF.BV == 0 | mean(abs(MF.V)) < sqrt(.Machine$double.eps)) MF.p <- NA
-              else MF.p <- tryCatch(.quad_pval(U = MF.U, V = MF.V, method = method), error = function(e) { NA })
-              MF.pval[i] <- tryCatch(fisher_pval(c(MF.Bp, MF.p)), error = function(e) { MF.Bp })
-            }
-            if((JF | JD) && !is.null(interaction.covariates)) {
-              MF.BU.adj <- sum(U.adj)
-              MF.BV.adj <- sum(V.adj)
-              MF.Bp.adj <- pchisq(MF.BU.adj^2/MF.BV.adj,df=1,lower.tail=FALSE)
-              V.adj.rowSums <- rowSums(V.adj)
-              MF.U.adj <- U.adj  - V.adj.rowSums * MF.BU.adj / MF.BV.adj 
-              MF.V.adj  <- V.adj  - tcrossprod(V.adj.rowSums) / MF.BV.adj 
-              if(MF.BV.adj == 0 | mean(abs(MF.V.adj)) < sqrt(.Machine$double.eps)) MF.adj.p <- NA
-              else MF.adj.p <- tryCatch(.quad_pval(U = MF.U.adj, V = MF.V.adj, method = method), error = function(e) { NA })
-              MF.adj.pval <- tryCatch(fisher_pval(c(MF.Bp.adj, MF.adj.p)), error = function(e) { MF.Bp.adj })
-            }
-            if(IF | JF | JD) {
-              IF.BU <- sum(IV.U)
-              IF.BV <- sum(IV.V)
-              IF.Bp <- pchisq(IF.BU^2/IF.BV,df=1,lower.tail=FALSE)
-              IV.V.rowSums <- rowSums(IV.V)
-              IF.U <- IV.U - IV.V.rowSums * IF.BU / IF.BV
-              IF.V <- IV.V - tcrossprod(IV.V.rowSums) / IF.BV
-              if(IF.BV == 0 | mean(abs(IF.V)) < sqrt(.Machine$double.eps)) IF.p <- NA
-              else IF.p <- tryCatch(.quad_pval(U = IF.U, V = IF.V, method = method), error = function(e) { NA })
-              IF.pval[i] <- tryCatch(fisher_pval(c(IF.Bp, IF.p)), error = function(e) { IF.Bp })
-            }
-            if(JF && is.null(interaction.covariates)) JF.pval[i] <- tryCatch(fisher_pval(c(MF.Bp, MF.p, IF.Bp, IF.p)), error = function(e) { MF.Bp })
-            if(JF && !is.null(interaction.covariates)) JF.pval[i] <- tryCatch(fisher_pval(c(MF.Bp.adj, MF.adj.p, IF.Bp, IF.p)), error = function(e) { MF.Bp.adj })
-            if(JD && is.null(interaction.covariates)) JD.pval[i] <- tryCatch(fisher_pval(c(MF.pval[i], IF.pval[i])), error = function(e) { MF.pval[i] })
-            if(JD && !is.null(interaction.covariates)) JD.pval[i] <- tryCatch(fisher_pval(c(MF.adj.pval, IF.pval[i])), error = function(e) { MF.adj.pval })
-            rm(geno)
-            if(Garbage.Collection) gc()
+            V_i <- try(solve(V), silent = TRUE)
+            if(class(V_i)[1] == "try-error") V_i <- MASS::ginv(V)
+            KPG <- crossprod(K,PG)
+            IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
+            IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
           }
-        
-          if(!is.null(meta.file.prefix)) close(meta.file.cov.handle)
-          tmp.out <- data.frame(group=unique(group.info$group)[idx], n.variants=n.variants, miss.min=miss.min, miss.mean=miss.mean, miss.max=miss.max, freq.min=freq.min, freq.mean=freq.mean, freq.max=freq.max,freq.strata.min=freq.strata.min, freq.strata.max=freq.strata.max)
-          if(MV | JV) tmp.out$MV.pval <- MV.pval
-          if(MF | JF | JD) tmp.out$MF.pval <- MF.pval
-          if(IV | JV) tmp.out$IV.pval <- IV.pval
-          if(IF | JF | JD) tmp.out$IF.pval <- IF.pval
-          if(JV) tmp.out$JV.pval <- JV.pval
-          if(JF) tmp.out$JF.pval <- JF.pval
-          if(JD) tmp.out$JD.pval <- JD.pval
-          tmp.out
+          if(!is.null(meta.file.prefix)) {
+            score <- cbind(tmp.group.info[,c("group","chr","pos","ref","alt")], N, miss, freq, U, matrix(crossprod(K,residuals), nrow = n.p, ncol = ei))
+            # odr <- order(as.numeric(row.names(tmp.group.info)))
+            # score <- score[odr, ]
+            # odr <- rep(odr, (1+ei))+rep(0:ei*length(odr), each=length(odr))
+            # COV <-rbind(cbind(V, t(KPG)), cbind(KPG, KPK))[odr, odr] 
+            COV <-rbind(cbind(V, t(KPG)), cbind(KPG, KPK))
+            write.table(score, meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE, append = TRUE)
+            writeBin(COV[lower.tri(COV, diag = TRUE)], meta.file.cov.handle, size = 4)
+          }
+          if(use.minor.allele) {
+            tmp.group.info$weight[freq > 0.5] <- -tmp.group.info$weight[freq > 0.5]
+            if(!is.null(strata)) freq_strata[, freq > 0.5] <- 1 - freq_strata[, freq > 0.5]
+            freq[freq > 0.5] <- 1 - freq[freq > 0.5]
+          }
+          weights <- rep(tmp.group.info$weight * MAF.weights.beta.fun(freq, MAF.weights.beta[1], MAF.weights.beta[2]), n.pheno)
+          n.variants[i] <- n.p
+          miss.min[i] <- min(miss)
+          miss.mean[i] <- mean(miss)
+          miss.max[i] <- max(miss)
+          freq.min[i] <- min(freq)
+          freq.mean[i] <- mean(freq)
+          freq.max[i] <- max(freq)
+          if(!is.null(strata)) {
+            freq.strata.min[i] <- min(freq_strata)
+            freq.strata.max[i] <- max(freq_strata)
+          }
+          if(MV | MF | JV | JF | JD) {
+            U <- U[c1]*weights
+            V <- t(V[c1,c1]*weights)*weights
+          }
+          if(!is.null(interaction.covariates) && (JV | JF | JD)) {
+            U.adj <- U.adj*weights
+            V.adj <- t(V.adj*weights)*weights
+          }
+          if(IV | IF | JV | JF | JD) {
+            IV.U <- IV.U*rep(weights, ei)
+            IV.V <- t(IV.V*rep(weights, ei))*rep(weights, ei)
+          }
+          if(MV | JV) MV.pval[i] <- tryCatch(.quad_pval(U = U, V = V, method = method), error = function(e) { NA })
+          if(IV | JV) IV.pval[i] <- tryCatch(.quad_pval(U = IV.U, V = IV.V, method = method), error = function(e) { NA })
+          if(JV && is.null(interaction.covariates)) JV.pval[i] <- tryCatch(fisher_pval(c(MV.pval[i], IV.pval[i])), error = function(e) { MV.pval[i] })
+          if(JV && !is.null(interaction.covariates)) {
+            MV.adj.pval <- tryCatch(.quad_pval(U = U.adj, V = V.adj, method = method), error = function(e) { NA })
+            JV.pval[i] <- tryCatch(fisher_pval(c(MV.adj.pval, IV.pval[i])), error = function(e) { MV.adj.pval })
+          }
+          if(MF | JF | JD) {
+            MF.BU <- sum(U)
+            MF.BV <- sum(V)
+            MF.Bp <- pchisq(MF.BU^2/MF.BV,df=1,lower.tail=FALSE)
+            V.rowSums <- rowSums(V)
+            MF.U <- U - V.rowSums * MF.BU / MF.BV
+            MF.V <- V - tcrossprod(V.rowSums) / MF.BV
+            if(MF.BV == 0 | mean(abs(MF.V)) < sqrt(.Machine$double.eps)) MF.p <- NA
+            else MF.p <- tryCatch(.quad_pval(U = MF.U, V = MF.V, method = method), error = function(e) { NA })
+            MF.pval[i] <- tryCatch(fisher_pval(c(MF.Bp, MF.p)), error = function(e) { MF.Bp })
+          }
+          if((JF | JD) && !is.null(interaction.covariates)) {
+            MF.BU.adj <- sum(U.adj)
+            MF.BV.adj <- sum(V.adj)
+            MF.Bp.adj <- pchisq(MF.BU.adj^2/MF.BV.adj,df=1,lower.tail=FALSE)
+            V.adj.rowSums <- rowSums(V.adj)
+            MF.U.adj <- U.adj  - V.adj.rowSums * MF.BU.adj / MF.BV.adj 
+            MF.V.adj  <- V.adj  - tcrossprod(V.adj.rowSums) / MF.BV.adj 
+            if(MF.BV.adj == 0 | mean(abs(MF.V.adj)) < sqrt(.Machine$double.eps)) MF.adj.p <- NA
+            else MF.adj.p <- tryCatch(.quad_pval(U = MF.U.adj, V = MF.V.adj, method = method), error = function(e) { NA })
+            MF.adj.pval <- tryCatch(fisher_pval(c(MF.Bp.adj, MF.adj.p)), error = function(e) { MF.Bp.adj })
+          }
+          if(IF | JF | JD) {
+            IF.BU <- sum(IV.U)
+            IF.BV <- sum(IV.V)
+            IF.Bp <- pchisq(IF.BU^2/IF.BV,df=1,lower.tail=FALSE)
+            IV.V.rowSums <- rowSums(IV.V)
+            IF.U <- IV.U - IV.V.rowSums * IF.BU / IF.BV
+            IF.V <- IV.V - tcrossprod(IV.V.rowSums) / IF.BV
+            if(IF.BV == 0 | mean(abs(IF.V)) < sqrt(.Machine$double.eps)) IF.p <- NA
+            else IF.p <- tryCatch(.quad_pval(U = IF.U, V = IF.V, method = method), error = function(e) { NA })
+            IF.pval[i] <- tryCatch(fisher_pval(c(IF.Bp, IF.p)), error = function(e) { IF.Bp })
+          }
+          if(JF && is.null(interaction.covariates)) JF.pval[i] <- tryCatch(fisher_pval(c(MF.Bp, MF.p, IF.Bp, IF.p)), error = function(e) { MF.Bp })
+          if(JF && !is.null(interaction.covariates)) JF.pval[i] <- tryCatch(fisher_pval(c(MF.Bp.adj, MF.adj.p, IF.Bp, IF.p)), error = function(e) { MF.Bp.adj })
+          if(JD && is.null(interaction.covariates)) JD.pval[i] <- tryCatch(fisher_pval(c(MF.pval[i], IF.pval[i])), error = function(e) { MF.pval[i] })
+          if(JD && !is.null(interaction.covariates)) JD.pval[i] <- tryCatch(fisher_pval(c(MF.adj.pval, IF.pval[i])), error = function(e) { MF.adj.pval })
+          rm(geno)
+          if(Garbage.Collection) gc()
+        }
+        if(!is.null(meta.file.prefix)) close(meta.file.cov.handle)
+        tmp.out <- data.frame(group=unique(group.info$group)[idx], n.variants=n.variants, miss.min=miss.min, miss.mean=miss.mean, miss.max=miss.max, freq.min=freq.min, freq.mean=freq.mean, freq.max=freq.max,freq.strata.min=freq.strata.min, freq.strata.max=freq.strata.max)
+        if(MV | JV) tmp.out$MV.pval <- MV.pval
+        if(MF | JF | JD) tmp.out$MF.pval <- MF.pval
+        if(IV | JV) tmp.out$IV.pval <- IV.pval
+        if(IF | JF | JD) tmp.out$IF.pval <- IF.pval
+        if(JV) tmp.out$JV.pval <- JV.pval
+        if(JF) tmp.out$JF.pval <- JF.pval
+        if(JD) tmp.out$JD.pval <- JD.pval
+        tmp.out
       }
-        
     } else {
       n.groups   <- n.groups.all
       n.variants <- rep(0,n.groups)
@@ -840,19 +856,18 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       if(JD) JD.pval <- rep(NA, n.groups)
       if(!is.null(meta.file.prefix)) {
         if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
+        if(!is.null(interaction.covariates)) stop("Error: meta-analysis not supported yet for interaction.covariates.")
         if(.Platform$endian!="little") stop("Error: platform must be little endian.")
         meta.file.score <- paste0(meta.file.prefix, ".score.1")
         meta.file.cov <- paste0(meta.file.prefix, ".cov.1")
-        write.table(t(c("group", "chr", "pos", "ref", "alt", "N", "missrate", "altfreq", "G.SCORE", paste("K.SCORE.", 1:n.E, sep=""))), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE)
+        write.table(t(c("group", "chr", "pos", "ref", "alt", "N", "missrate", "altfreq", "G.SCORE", paste("K.SCORE.", 1:ei, sep=""))), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE)
         meta.file.cov.handle <- file(meta.file.cov, "wb")
-        writeBin(n.E, meta.file.cov.handle, size = 4)
+        writeBin(as.numeric(ei), meta.file.cov.handle, size = 4)
         writeBin(interaction, meta.file.cov.handle, size = 4)
       }
-      
       for(i in 1:n.groups) {
         tmp.idx <- group.idx.start[i]:group.idx.end[i]
         tmp.group.info <- group.info[tmp.idx, , drop = FALSE]
-        
         if (bgenInfo$Layout == 2) {
           geno <- .Call("magee_bgen13", geno.file, tmp.group.info$variant.idx, ptr, select, bgenInfo$Compression, n)
         } else {
@@ -861,13 +876,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         miss <- colMeans(is.na(geno))
         freq <- colMeans(geno, na.rm = TRUE)/2
         include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
+        if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
         if(!is.null(strata)) { # E is not continuous
           freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
           if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
           include <- include & !is.na(freq_strata[1,]) & !is.na(freq_strata[2,]) & freq_strata[1,] >= MAF.range[1] & freq_strata[2,] <= 1-MAF.range[1]
           rm(freq.tmp)
         }
-  
         n.p <- sum(include)
         if(n.p == 0) next
         tmp.group.info <- tmp.group.info[include, , drop = FALSE]
@@ -926,8 +941,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
         }
         if(!is.null(meta.file.prefix)) {
+          score <- cbind(tmp.group.info[,c("group","chr","pos","ref","alt")], N, miss, freq, U, matrix(crossprod(K,residuals), nrow = n.p, ncol = ei))
+          # odr <- order(as.numeric(row.names(tmp.group.info)))
+          # score <- score[odr, ]
+          # odr <- rep(odr, (1+ei))+rep(0:ei*length(odr), each=length(odr))
+          # COV <-rbind(cbind(V, t(KPG)), cbind(KPG, KPK))[odr, odr] 
           COV <-rbind(cbind(V, t(KPG)), cbind(KPG, KPK))
-          write.table(cbind(tmp.group.info[,c("group","chr","pos","ref","alt")], N, miss, freq, U, matrix(crossprod(K,residuals), nrow = n.p, ncol = n.E)), meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE, append = TRUE)
+          write.table(score, meta.file.score, quote = FALSE, row.names = FALSE, col.names = FALSE, append = TRUE)
           writeBin(COV[lower.tri(COV, diag = TRUE)], meta.file.cov.handle, size = 4)
         }
         if(use.minor.allele) {
@@ -1023,16 +1043,21 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
 
 .Q_pval <- function(Q, lambda, method = "davies") {
   if(method == "davies") {
-    tmp <- suppressWarnings(CompQuadForm::davies(q = Q, lambda = lambda, acc = 1e-6))
-    pval <- tmp$Qq
-    if((tmp$ifault > 0) | (pval <= 1e-5) | (pval >= 1)) method <- "kuonen"
+    tmp <- try(suppressWarnings(CompQuadForm::davies(q = Q, lambda = lambda, acc = 1e-6)))
+    if(class(tmp) == "try-error" || tmp$ifault > 0 || tmp$Qq <= 1e-5 || tmp$Qq >= 1) method <- "kuonen"
+    else return(tmp$Qq)
   }
   if(method == "kuonen") {
-    pval <- pKuonen(x = Q, lambda = lambda)
-    if(is.na(pval)) method <- "liu"
+    pval <- try(.pKuonen(x = Q, lambda = lambda))
+    if(class(pval) == "try-error" || is.na(pval)) method <- "liu"
+    else return(pval)
   }
-  if(method == "liu") pval <- CompQuadForm::liu(q = Q, lambda = lambda)
-  return(pval)
+  if(method == "liu") {
+    pval <- try(CompQuadForm::liu(q = Q, lambda = lambda))
+    if(class(pval) == "try-error") cat("Warning: method \"liu\" failed...\nQ:", Q, "\nlambda:", lambda, "\n")
+    else return(pval)
+  }
+  return(NA)
 }
 
 .quad_pval <- function(U, V, method = "davies") {
@@ -1043,7 +1068,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
   return(pval)
 }
 
-pKuonen<-function (x, lambda, delta = rep(0, length(lambda)), df = rep(1, length(lambda)))
+.pKuonen<-function (x, lambda, delta = rep(0, length(lambda)), df = rep(1, length(lambda)))
 {
   delta <- delta[lambda != 0]
   df <- df[lambda != 0]
@@ -1051,7 +1076,7 @@ pKuonen<-function (x, lambda, delta = rep(0, length(lambda)), df = rep(1, length
   if(length(lambda) != length(delta)) stop("Error: inconsistent length in lambda and delta!")
   if(length(lambda) != length(df)) stop("Error: inconsistent length in lambda and df!")
   if (length(lambda) == 1) {
-    pchisq(x/lambda, df = df, ncp = delta, lower.tail = FALSE)
+    return(pchisq(x/lambda, df = df, ncp = delta, lower.tail = FALSE))
   }
   d <- max(lambda)
   lambda <- lambda/d
@@ -1106,17 +1131,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   if(!grepl("\\.gds$", geno.file[1])) stop("Error: currently only .gds format is supported in geno.file for MAGEE.prep!")
   if(!class(null.obj) %in% c("glmmkin", "glmmkin.multi")) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
   n.pheno <- null.obj$n.pheno
-  if(any(duplicated(null.obj$id_include))) {
-    J <- Matrix(sapply(unique(null.obj$id_include), function(x) 1*(null.obj$id_include==x)), sparse = TRUE)
-    residuals <- as.numeric(as.matrix(crossprod(J, null.obj$scaled.residuals)))
-    if(!is.null(null.obj$P)) null.obj$P <- as.matrix(crossprod(J, crossprod(null.obj$P, J)))
-    else {
-      null.obj$Sigma_iX <- crossprod(J, null.obj$Sigma_iX)
-      null.obj$Sigma_i <- forceSymmetric(crossprod(J,crossprod(null.obj$Sigma_i,J)))
-      null.obj$Sigma_i <- Matrix(null.obj$Sigma_i, sparse = TRUE)
-    }
-    rm(J)
-  } else residuals <- null.obj$scaled.residuals
+  residuals <- null.obj$scaled.residuals
   n <- length(unique(null.obj$id_include))
   
   qi <- length(interaction.covariates) # number of covariates with interaction effects but we don't test
@@ -1142,7 +1157,6 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   }
   interaction <- as.character(interaction)
   n.E <- as.numeric(dim(E)[2]) # n.E = qi + ei
-  E <- scale(E, scale = FALSE)
   
   if (class(geno.file)[1] != "SeqVarGDSClass") {
     gds <- SeqArray::seqOpen(geno.file) 
@@ -1154,7 +1168,16 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   if(any(is.na(match(null.obj$id_include, sample.id)))) warning("Check your data... Some individuals in null.obj$id_include are missing in sample.id of geno.file!")
   sample.id <- sample.id[sample.id %in% null.obj$id_include]
   if(length(sample.id) == 0) stop("Error: null.obj$id_include does not match sample.id in geno.file!")
-  match.id <- match(sample.id, unique(null.obj$id_include))
+  if(any(duplicated(null.obj$id_include))) {
+    match.id <- null.obj$id_include %in% sample.id
+    null.obj$id_include <- null.obj$id_include[match.id]
+    J <- t(sparseMatrix(i=1:length(null.obj$id_include), j=match(null.obj$id_include, unique(null.obj$id_include)[match(sample.id, unique(null.obj$id_include))]), x=1))
+  } else {
+    match.id <- match(sample.id, null.obj$id_include)
+    J <- NULL
+  }
+  E <- as.matrix(E[match.id, , drop = FALSE])
+  E <- scale(E, scale = FALSE)
   if(class(null.obj) == "glmmkin.multi") {
     residuals <- residuals[match.id, , drop = FALSE]
     match.id <- rep(match.id, n.pheno) + rep((0:(n.pheno-1))*n, each = length(match.id))
@@ -1167,7 +1190,6 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
     null.obj$Sigma_iX <- null.obj$Sigma_iX[match.id, , drop = FALSE]
     null.obj$Sigma_i <- null.obj$Sigma_i[match.id, match.id]
   }
-  E <- as.matrix(E[match.id, , drop = FALSE])
   strata <- apply(E, 1, paste, collapse = ":")
   strata <- if(length(unique(strata))>length(strata)/100) NULL else as.numeric(as.factor(strata))
   if(!is.null(strata)) {
@@ -1191,8 +1213,11 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   if (class(group.info) == "try-error") {
     stop("Error: cannot read group.file!")
   }
-  group.info <- group.info[!duplicated(paste(group.info$group, group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")), ]
   variant.id1 <- paste(group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")
+  is.duplicated <- duplicated(paste(group.info$group, variant.id1, sep = ":"))
+  group.info <- group.info[!is.duplicated, ]
+  variant.id1 <- variant.id1[!is.duplicated]
+  rm(is.duplicated)
   variant.idx1 <- variant.idx[match(variant.id1, variant.id)]
   group.info$variant.idx <- variant.idx1
   group.info$flip <- 0
@@ -1203,10 +1228,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
     if(any(!is.na(variant.idx1) & !is.na(variant.idx2))) {
       tmp.dups <- which(!is.na(variant.idx1) & !is.na(variant.idx2))
       cat("The following ambiguous variants were found:\n")
-      cat("chr:", chr[tmp.dups], "\n")
-      cat("pos:", pos[tmp.dups], "\n")
-      cat("ref:", ref[tmp.dups], "\n")
-      cat("alt:", alt[tmp.dups], "\n")
+      cat("variant:", variant.id1[tmp.dups], "\n") 
       cat("Warning: both variants with alleles ref/alt and alt/ref were present at the same position and coding should be double checked!\nFor these variants, only those with alleles ref/alt were used in the analysis...\n")
       variant.idx2[tmp.dups] <- NA
       rm(tmp.dups)
@@ -1216,7 +1238,6 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
     rm(variant.id2, variant.idx2)
   }
   rm(variant.id, variant.id1, variant.idx1); gc()
-  #group.info$variant.idx <- variant.idx[match(group.info$variant, variant.id)]
   group.info <- subset(group.info, !is.na(variant.idx))
   groups <- unique(group.info$group)
   n.groups.all <- length(groups)
@@ -1224,12 +1245,12 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   group.info <- group.info[order(group.info$group.idx, group.info$variant.idx), ]
   group.idx.end <- findInterval(1:n.groups.all, group.info$group.idx)
   group.idx.start <- c(1, group.idx.end[-n.groups.all] + 1)
-  out <- list(null.obj = null.obj, E = E, geno.file = geno.file, group.file = group.file, group.file.sep = group.file.sep, strata = strata, strata.list = strata.list, auto.flip = auto.flip, residuals = residuals, sample.id = sample.id, group.info = group.info, groups = groups, group.idx.start = group.idx.start, group.idx.end = group.idx.end, ei = ei, qi = qi)
+  out <- list(null.obj = null.obj, E = E, geno.file = geno.file, group.file = group.file, group.file.sep = group.file.sep, J = J, strata = strata, strata.list = strata.list, auto.flip = auto.flip, residuals = residuals, sample.id = sample.id, group.info = group.info, groups = groups, group.idx.start = group.idx.start, group.idx.end = group.idx.end, ei = ei, qi = qi)
   class(out) <- "MAGEE.prep"
   return(out)
 }
 
-MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, missing.method = "impute2mean", method = "davies", tests = "JF", use.minor.allele = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1)
+MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NULL, MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, missing.method = "impute2mean", method = "davies", tests = "JF", use.minor.allele = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1)
 {
   if(class(MAGEE.prep.obj) != "MAGEE.prep") stop("Error: MAGEE.prep.obj must be a class MAGEE.prep object!")
   is.Windows <- Sys.info()["sysname"] == "Windows"
@@ -1239,7 +1260,9 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
   }
   null.obj <- MAGEE.prep.obj$null.obj
   E <- MAGEE.prep.obj$E
-  geno.file <- MAGEE.prep.obj$geno.file
+  if(is.null(geno.file)) {
+    geno.file <- MAGEE.prep.obj$geno.file
+  }
   residuals <- MAGEE.prep.obj$residuals
   sample.id <- MAGEE.prep.obj$sample.id
   group.info <- MAGEE.prep.obj$group.info
@@ -1247,6 +1270,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
   n.groups.all <- length(groups)
   group.idx.start <- MAGEE.prep.obj$group.idx.start
   group.idx.end <- MAGEE.prep.obj$group.idx.end
+  J <- MAGEE.prep.obj$J
   strata <- MAGEE.prep.obj$strata
   strata.list <- MAGEE.prep.obj$strata.list
   ei <- MAGEE.prep.obj$ei
@@ -1317,7 +1341,8 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
         miss <- colMeans(is.na(geno))
         freq <- colMeans(geno, na.rm = TRUE)/2
         include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
-        if(!is.null(strata)) { # E is not continuous
+	if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
+	if(!is.null(strata)) { # E is not continuous
           freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
           if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
           include <- include & !is.na(freq_strata[1,]) & !is.na(freq_strata[2,]) & freq_strata[1,] >= MAF.range[1] & freq_strata[2,] <= 1-MAF.range[1]
@@ -1473,6 +1498,10 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
       if(JD) tmp.out$JD.pval <- JD.pval
       tmp.out
     }
+    if (class(geno.file)[1] == "SeqVarGDSClass") {
+      SeqArray::seqClose(geno.file)
+    }
+    return(out)
   } else { # use a single core
     n.groups <- n.groups.all
     if (class(geno.file)[1] != "SeqVarGDSClass") {
@@ -1513,6 +1542,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
       miss <- colMeans(is.na(geno))
       freq <- colMeans(geno, na.rm = TRUE)/2
       include <- (miss <= miss.cutoff & ((freq >= MAF.range[1] & freq <= MAF.range[2]) | (freq >= 1-MAF.range[2] & freq <= 1-MAF.range[1])))
+      if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
       if(!is.null(strata)) { # E is not continuous
         freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2) # freq.tmp is a matrix, each column is a strata, and each row is a varirant 
         if (length(dim(freq.tmp)) == 2) freq_strata <- apply(freq.tmp, 1, range) else freq_strata <- as.matrix(range(freq.tmp)) # freq_strata is the range of allele freq across strata.list
@@ -1670,3 +1700,5 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, meta.file.prefix = NULL, MAF.range = c(
   }
   return(out[match(groups, out$group),])
 }
+
+
