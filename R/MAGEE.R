@@ -1245,7 +1245,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   group.info <- group.info[order(group.info$group.idx, group.info$variant.idx), ]
   group.idx.end <- findInterval(1:n.groups.all, group.info$group.idx)
   group.idx.start <- c(1, group.idx.end[-n.groups.all] + 1)
-  out <- list(null.obj = null.obj, E = E, geno.file = geno.file, group.file = group.file, group.file.sep = group.file.sep, J = J, strata = strata, strata.list = strata.list, auto.flip = auto.flip, residuals = residuals, sample.id = sample.id, group.info = group.info, groups = groups, group.idx.start = group.idx.start, group.idx.end = group.idx.end, ei = ei, qi = qi)
+  out <- list(null.obj = null.obj, interaction = interaction, E = E, geno.file = geno.file, group.file = group.file, group.file.sep = group.file.sep, J = J, strata = strata, strata.list = strata.list, auto.flip = auto.flip, residuals = residuals, sample.id = sample.id, group.info = group.info, groups = groups, group.idx.start = group.idx.start, group.idx.end = group.idx.end, ei = ei, qi = qi)
   class(out) <- "MAGEE.prep"
   return(out)
 }
@@ -1259,6 +1259,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
     ncores <- 1
   }
   null.obj <- MAGEE.prep.obj$null.obj
+  interaction <- MAGEE.prep.obj$interaction
   E <- MAGEE.prep.obj$E
   if(is.null(geno.file)) {
     geno.file <- MAGEE.prep.obj$geno.file
