@@ -18,7 +18,7 @@ Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.2.0)
 NeedsCompilation: yes
-Packaged: 2022-01-27 05:54:25 UTC; hchen
+Packaged: 2022-01-27 06:09:37 UTC; hchen
 Author: Xinyu Wang [aut],
   Han Chen [aut, cre],
   Duy Pham [aut],

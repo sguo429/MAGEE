@@ -7,9 +7,9 @@ MAGEE is an R package for gene-environment interaction (GEI) tests and joint tes
 For GWAS, MAGEE performs single-variant tests for GEI and joint effects. For rare variant analysis, MAGEE performs group tests based on user-defined variant sets. The group-based tests include two GEI tests and three joint tests: interaction variance component test (IV), interaction hybrid test using Fisher's method (IF), joint variance component test (JV), joint hybrid test using Fisher's method (JF), and joint hybrid test using double Fisher's procedures (JD). Before running MAGEE for analyzing the data across the whole genome, a global null model that only accounts for covariates (not including any genetic main effects) is fitted. The model should be fitted using the R package <a href="https://CRAN.R-project.org/package=GMMAT">GMMAT</a> proposed by <a href="https://doi.org/10.1016/j.ajhg.2016.02.012">Chen et al. (2016)</a>. See the <a href="https://github.com/large-scale-gxe-methods/MAGEE/blob/master/inst/doc/MAGEE.pdf">vignettes</a> for details.
 
 ## Installing
-See Section 3.2 of the <a href="https://github.com/xwang21/MAGEE/blob/master/inst/doc/MAGEE.pdf">vignette</a>.
+See Section 3.2 of the <a href="https://github.com/large-scale-gxe-methods/MAGEE/blob/master/inst/doc/MAGEE.pdf">vignette</a>.
 
-For optimal computational performance, it is recommended to use an R version configured with the Intel Math Kernel Library (or other fast BLAS/LAPACK libraries). See the <a href="https://software.intel.com/content/www/us/en/develop/articles/using-intel-mkl-with-r.html">instructions</a> on building R with Intel MKL.
+For optimal computational performance, it is recommended to use an R version configured with the Intel Math Kernel Library (or other fast BLAS/LAPACK libraries). See the <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/using-onemkl-with-r.html">instructions</a> on building R with Intel MKL.
 
 ## Version
 The current version is 1.0.2 (January 27, 2022).
