@@ -38,9 +38,9 @@ morekeywords={}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
-\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.0.1}
-\date{November 13, 2021}
-\author{Xinyu Wang\\Human Genetics Center\\Dept. of Biostatistics and Data Science\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Xinyu.Wang@uth.tmc.edu\\\\Han Chen\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\Center for Precision Health\\School of Biomedical Informatics\\The University of Texas Health Science Center at Houston\\Email: Han.Chen.2@uth.tmc.edu\\\\Duy Pham\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: duy.t.pham@uth.tmc.edu} 
+\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.0.2}
+\date{January 27, 2022}
+\author{Xinyu Wang\\Human Genetics Center\\Dept. of Biostatistics and Data Science\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Xinyu.Wang@uth.tmc.edu\\\\Han Chen\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\Center for Precision Health\\School of Biomedical Informatics\\The University of Texas Health Science Center at Houston\\Email: Han.Chen.2@uth.tmc.edu\\\\Duy Pham\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: duy.t.pham@uth.tmc.edu\\\\Kenneth Westerman\\Department of Medicine\\Clinical and Translational Epidemiology Unit\\Mongan Institute\\Massachusetts General Hospital\\Email: KEWESTERMAN@mgh.harvard.edu} 
 
 \maketitle
 \newpage
@@ -341,6 +341,12 @@ Initial public release of \textit{MAGEE}.
 \item Supported multiple phenotype analysis in \textbf{MAGEE}.
 \item Supported longitudinal data analysis in \textbf{glmm.gei} and \textbf{MAGEE}.
 \item Updated automatic tests for \textbf{glmm.gei} and \textbf{MAGEE}.
+\end{enumerate}
+
+\subsection{Version 1.0.3 (January 27, 2022)}
+\begin{enumerate}
+\item Fixed a dgesdd bug from \textbf{MASS::ginv} in \textbf{MAGEE}.
+\item Fixed a minor bug on the interaction term in \textbf{MAGEE.prep} and \textbf{MAGEE.lowmem}.
 \end{enumerate}
 
 

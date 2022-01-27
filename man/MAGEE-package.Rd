@@ -11,8 +11,8 @@ An R package for performing generalized linear mixed model-based single-variant 
 \tabular{ll}{
 Package: \tab MAGEE\cr
 Type: \tab Package\cr
-Version: \tab 1.0.1\cr
-Date: \tab 2021-11-13\cr
+Version: \tab 1.0.2\cr
+Date: \tab 2022-01-27\cr
 License: \tab GPL-3\cr
 }
 }
