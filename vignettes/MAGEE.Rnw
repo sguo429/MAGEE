@@ -38,9 +38,9 @@ morekeywords={}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
-\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.0.2}
-\date{January 27, 2022}
-\author{Xinyu Wang\\Human Genetics Center\\Dept. of Biostatistics and Data Science\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Xinyu.Wang@uth.tmc.edu\\\\Han Chen\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\Center for Precision Health\\School of Biomedical Informatics\\The University of Texas Health Science Center at Houston\\Email: Han.Chen.2@uth.tmc.edu\\\\Duy Pham\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: duy.t.pham@uth.tmc.edu\\\\Kenneth Westerman\\Department of Medicine\\Clinical and Translational Epidemiology Unit\\Mongan Institute\\Massachusetts General Hospital\\Email: KEWESTERMAN@mgh.harvard.edu} 
+\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.1.0}
+\date{March 24, 2022}
+\author{Xinyu Wang\\Human Genetics Center\\Dept. of Biostatistics and Data Science\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Xinyu.Wang@uth.tmc.edu\\\\Han Chen\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\Center for Precision Health\\School of Biomedical Informatics\\The University of Texas Health Science Center at Houston\\Email: Han.Chen.2@uth.tmc.edu\\\\Duy Pham\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: duy.t.pham@uth.tmc.edu\\\\Kenneth Westerman\\Department of Medicine\\Clinical and Translational Epidemiology Unit\\Mongan Institute\\Massachusetts General Hospital\\Email: KEWESTERMAN@mgh.harvard.edu\\\\Cong Pan\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: cong.pan@uth.tmc.edu} 
 
 \maketitle
 \newpage
@@ -185,51 +185,65 @@ The single variant test function \textbf{glmm.gei} generates a tab-delimited pla
 
 If you use a GDS genotype file "geno.gds", here are the header and the first 5 rows of the example output "glmm.gei.gds.testoutfile.txt" using the default settings from \textbf{glmm.gei}:
 \begin{verbatim}
-SNP     CHR     POS     REF     ALT     N      MISSRATE AF      
-SNP1    1       1       T       A       393    0.0175   0.974554707379135
-SNP2    1       2       A       C       400    0        0.5     
-SNP3    1       3       C       A       400    0        0.7925  
-SNP4    1       4       G       A       400    0        0.70125 
-SNP5    1       5       A       G       400    0        0.59375 
+SNP     CHR     POS     Non_Effect_Allele     Effect_Allele     N           
+SNP1    1       1       T                     A                 393    
+SNP2    1       2       A                     C                 400        
+SNP3    1       3       C                     A                 400      
+SNP4    1       4       G                     A                 400     
+SNP5    1       5       A                     G                 400     
 ...
-AF.strata.min   AF.strata.max   BETA.MAIN      SE.MAIN      PVAL.MAIN  
-0.9720812       0.9770408       -0.43565484    0.4684802    0.3524062 
-0.4700000       0.5300000       0.07576315     0.1469115    0.6060598
-0.7825000       0.8025000       0.01743008     0.1807686    0.9231854
-0.6850000       0.7175000       0.07688790     0.1571101    0.6245666 
-0.5725000       0.6150000       -0.09464890    0.1537993    0.5382872
+AF	            N_sex_0     AF_sex_0        N_sex_1     AF_sex_1
+0.974554707     197	        0.972081218     196	       0.977040816
+0.5             200	        0.47	          200	       0.53
+0.7925	        200	        0.7825	        200	       0.8025
+0.70125	        200	        0.685	          200	       0.7175
+0.59375	        200	        0.615	          200	       0.5725
 ...
-STAT.INT     PVAL.INT     PVAL.JOINT
-0.2918603    0.5890309    0.5608414
-0.1591065    0.6899805    0.8085364
-1.6663553    0.1967474    0.4326500
-1.2749996    0.2588309    0.4689541
-0.9141454    0.3390169    0.5239105
+Beta_Marginal     SE_Beta_Marginal     Beta_G-sex     SE_Beta_G-sex
+-0.435654836	    0.468480222	         0.501766033	  0.928781874
+0.075763145	      0.146911524	         0.116228693	  0.291386482
+0.017430083	      0.180768633	         0.45998188	    0.356333716
+0.076887897	      0.157110091	         0.347976616	  0.308173322
+-0.0946489	      0.153799346	         -0.28994586	  0.303255917
+...
+P_Value_Marginal     P_Value_Interaction     P_Value_Joint
+0.352406199	         0.589030852	           0.560841417
+0.606059808	         0.68998048	             0.80853642
+0.923185375	         0.19674742	             0.432649966
+0.62456656	         0.258830854	           0.468954083
+0.538287231	         0.339016921	           0.523910511
 \end{verbatim}
 The first 5 columns are extracted from the GDS file: SNP ("annotation/id"), CHR ("chromosome"), POS ("position"), reference and alternate alleles ("allele"). Results are included in 11 columns for the ALT allele: the sample size N (with non-missing genotypes), the genotype missing rate MISSRATE, the allele frequency (AF), the minimum and maximum allele frequency after stratification (AF.strata.min/AF.strata.max), the coefficient estimate for the marginal genetic effect (BETA.MAIN), the SE of the marginal genetic effect (SE.MAIN), the marginal effect score test \textit{P} value PVAL.MAIN, the gene-environment interaction score STAT.INT, the gene-environment interaction test \textit{P} value PVAL.INT, and the joint test \textit{P} value PVAL.JOINT.
 
 If you use a BGEN genotype file "geno.bgen", here are the header and the first 5 rows of the example output "glmm.gei.bgen.testoutfile.txt" using the default settings from \textbf{glmm.gei}:
 \begin{verbatim}
-SNP    RSID   CHR   POS   A1    A2    N      MISSRATE AF      
-SNP1   SNP1   1     1     T     A     393    0.0175   0.974554707379135
-SNP2   SNP2   1     2     A     C     400    0        0.5     
-SNP3   SNP3   1     3     C     A     400    0        0.7925  
-SNP4   SNP4   1     4     G     A     400    0        0.70125 
-SNP5   SNP5   1     5     A     G     400    0        0.59375 
+SNP     RSID     CHR     POS     Non_Effect_Allele     Effect_Allele     N           
+SNP1    SNP1     1       1       T                     A                 393    
+SNP2    SNP2     1       2       A                     C                 400        
+SNP3    SNP3     1       3       C                     A                 400      
+SNP4    SNP4     1       4       G                     A                 400     
+SNP5    SNP5     1       5       A                     G                 400     
 ...
-AF.strata.min   AF.strata.max   BETA.MAIN      SE.MAIN  
-0.9720812       0.9770408       -0.43565484    0.4684802
-0.4700000       0.5300000       0.07576315     0.1469115
-0.7825000       0.8025000       0.01743008     0.1807686
-0.6850000       0.7175000       0.07688790     0.1571101
-0.5725000       0.6150000       -0.09464890    0.1537993 
+AF	            N_sex_0     AF_sex_0        N_sex_1     AF_sex_1
+0.974554707     197	        0.972081218     196	       0.977040816
+0.5             200	        0.47	          200	       0.53
+0.7925	        200	        0.7825	        200	       0.8025
+0.70125	        200	        0.685	          200	       0.7175
+0.59375	        200	        0.615	          200	       0.5725
 ...
-PVAL.MAIN    STAT.INT     PVAL.INT     PVAL.JOINT
-0.352406     0.291860     0.589031     0.560841
-0.606060     0.159106     0.689980     0.808536
-0.923185     1.666360     0.196747     0.432650
-0.624567     1.275000     0.258831     0.468954
-0.538287     0.914145     0.339017     0.523911
+Beta_Marginal     SE_Beta_Marginal     Beta_G-sex     SE_Beta_G-sex
+-0.435654836	    0.468480222	         0.501766033	  0.928781874
+0.075763145	      0.146911524	         0.116228693	  0.291386482
+0.017430083	      0.180768633	         0.45998188	    0.356333716
+0.076887897	      0.157110091	         0.347976616	  0.308173322
+-0.0946489	      0.153799346	         -0.28994586	  0.303255917
+...
+P_Value_Marginal     P_Value_Interaction     P_Value_Joint
+0.352406199	         0.589030852	           0.560841417
+0.606059808	         0.68998048	             0.80853642
+0.923185375	         0.19674742	             0.432649966
+0.62456656	         0.258830854	           0.468954083
+0.538287231	         0.339016921	           0.523910511
 \end{verbatim}
 The first 6 columns are copied from the BGEN file: the SNP, RSID, chromosome CHR, physical position POS, and the first and second alleles A1 and A2. Results are included in 11 columns for the second allele in the BGEN file: the sample size N (with non-missing genotypes), the genotype missing rate MISSRATE, the allele frequency (AF), the minimum and maximum allele frequency after stratification (AF.strata.min/AF.strata.max), the coefficient estimate for the marginal genetic effect (BETA.MAIN), the SE of the marginal genetic effect (SE.MAIN), the marginal effect score test \textit{P} value PVAL.MAIN, the gene-environment interaction score STAT.INT, the gene-environment interaction test \textit{P} value PVAL.INT, and the joint test \textit{P} value PVAL.JOINT.
 
@@ -343,10 +357,19 @@ Initial public release of \textit{MAGEE}.
 \item Updated automatic tests for \textbf{glmm.gei} and \textbf{MAGEE}.
 \end{enumerate}
 
-\subsection{Version 1.0.3 (January 27, 2022)}
+\subsection{Version 1.0.2 (January 27, 2022)}
 \begin{enumerate}
 \item Fixed a dgesdd bug from \textbf{MASS::ginv} in \textbf{MAGEE}.
 \item Fixed a minor bug on the interaction term in \textbf{MAGEE.prep} and \textbf{MAGEE.lowmem}.
+\end{enumerate}
+
+\subsection{Version 1.1.0 (March 24, 2022)}
+\begin{enumerate}
+\item Edited the names of output headers in \textbf{glmm.gei}.
+\item Added new output headers in \textbf{glmm.gei}.
+\item Fixed bugs on longitudinal data analysis in \textbf{glmm.gei}.
+\item Fixed bugs on interaction covariates in \textbf{glmm.gei}.
+\item Updated automatic tests for \textbf{glmm.gei}.
 \end{enumerate}
 
 
