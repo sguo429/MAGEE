@@ -68,36 +68,37 @@ extern "C"
 {
   
     
-  SEXP glmm_gei_bgen13(SEXP res_in, SEXP nullObj_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP missrate_in, SEXP miss_method_in, SEXP nperbatch_in, 
-                       SEXP ei_in, SEXP qi_in, SEXP isNullP_in, SEXP isNullEC_in, SEXP strata_in,
+  SEXP glmm_gei_bgen13( SEXP dupe_flag, SEXP res_in, SEXP nullObj_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP missrate_in, SEXP miss_method_in, SEXP nperbatch_in, 
+                       SEXP ei_in, SEXP qi_in, SEXP isNullP_in, /*SEXP isNullEC_in,*/ SEXP strata_in,
                        SEXP select_in, SEXP begin_in, SEXP end_in, SEXP pos_in, SEXP nbgen_in, SEXP compression_in, SEXP metaOutput_in) {
     try{
       
-      bool isNullP = Rcpp::as<bool>(isNullP_in);
-      bool isNullEC = Rcpp::as<bool>(isNullEC_in);
+      bool isNullP = Rcpp::as<bool>(isNullP_in);      
       int ei = Rcpp::as<int>(ei_in);
       int qi = Rcpp::as<int>(qi_in);
-      
+      bool isDupeID = Rcpp::as<bool>(dupe_flag);
       arma::mat P;
       arma::sp_mat Sigma_i;
       arma::sp_mat Sigma_iX;
       arma::sp_mat cov;
-      
+      arma::sp_mat J;             
       Rcpp::List null_obj(nullObj_in);
       Rcpp::List strata_list(strata_in);
       int strataList_size = 0;
       bool skip_strata = true;
+
       if (strata_list[0]!=R_NilValue) {
         skip_strata = false;
         strataList_size = strata_list.size();
       }
+
+      if (!isDupeID)
+      {
+        J = as<arma::sp_mat>(null_obj["J"]);
+      }
+      
       arma::mat E = as<arma::mat>(null_obj["E"]);
       arma::mat EC;
-      if (!isNullEC) {
-        EC = as<arma::mat>(null_obj["EC"]);
-      } else {
-        (void)EC;
-      }
       
       if (!isNullP) {
         P = as<arma::mat>(null_obj["P"]);
@@ -119,25 +120,23 @@ extern "C"
       const char miss_method = Rcpp::as<char>(miss_method_in);
       const bool metaOutput = Rcpp::as<bool>(metaOutput_in);
       string bgenfile = Rcpp::as<string>(bgenfile_in);
-      string outfile  = Rcpp::as<string>(outfile_in);
-      
+      string outfile  = Rcpp::as<string>(outfile_in);      
       const size_t npb = Rcpp::as<size_t>(nperbatch_in);
       Rcpp::IntegerVector select(select_in);
+
       string line, snp;
       size_t n = res.n_elem;
-      vec g(n);
+      vec g(n);      
       uvec gmiss(n), snp_skip = zeros<uvec>(npb);
       mat G(n, npb);
       string* tmpout = new string[npb];
       vector <string> biminfo;
       double gmean, geno, gmax, gmin;
-      //const double tol = 1e-5;
       size_t ncount, nmiss, npbidx = 0;
       double compute_time = 0.0;
       ofstream writefile(outfile.c_str(), std::ofstream::binary);
-      
-      struct libdeflate_decompressor* decompressor = libdeflate_alloc_decompressor();
-      
+
+      struct libdeflate_decompressor* decompressor = libdeflate_alloc_decompressor();      
       uint maxLA = 65536;
       std::vector<uchar> zBuf12;
       std::vector<uchar> shortBuf12;
@@ -146,18 +145,21 @@ extern "C"
       char* rsID    = new char[maxLA + 1];
       char* chrStr  = new char[maxLA + 1];
       char* allele1 = new char[maxLA + 1];
-      char* allele0 = new char[maxLA + 1];
-      
+      char* allele0 = new char[maxLA + 1];      
       uint begin = Rcpp::as<uint>(begin_in);
       uint end   = Rcpp::as<uint>(end_in);
+      uint Nbgen = Rcpp::as<uint>(nbgen_in);
+      vec g2(Nbgen);
+      g2.fill(datum::nan);
       long long unsigned int byte = Rcpp::as<long long unsigned int>(pos_in);
       FILE* fp = fopen(bgenfile.c_str(), "rb");
-      fseek(fp, byte, SEEK_SET);
-      
+      fseek(fp, byte, SEEK_SET);      
       int ret;
+      mat strata_AF(end,strataList_size);
+      mat strata_N(end,strataList_size);
+
       for (uint m = begin; m < end; m++) {
-        stringstream writeout;
-        
+        stringstream writeout;        
         ushort LS; 
         ret = fread(&LS, 2, 1, fp);
         ret = fread(snpID, 1, LS, fp); 
@@ -258,7 +260,7 @@ extern "C"
         gmin=100.0;
         nmiss=0;
         ncount = 0;
-        
+
         if (!is_phased) {
           for (size_t i = 0; i < N; i++) {
             const uint32_t missing_and_ploidy = missing_and_ploidy_info[i];
@@ -279,22 +281,20 @@ extern "C"
             } else {
 		            Rcout << "Error reading bgen file: Ploidy value " << missing_and_ploidy << " is unsupported. Must be 2 or 130. \n"; return R_NilValue;    
             }
-            
-            
+                        
             if (select[ncount] > 0){ 
               double p11 = numer_aa / double(1.0 * numer_mask);
               double p10 = numer_ab / double(1.0 * numer_mask);
               geno = 2 * (1 - p11 - p10) + p10;
               gmiss[select[ncount]-1] = 0;
               g[select[ncount]-1] = geno;
+              g2[select[ncount]-1] = geno;
               gmean += geno;
               if (geno > gmax) { gmax = geno; }
               if (geno < gmin) { gmin = geno; }
             } 
-            ncount++;
-            
-          }
-          
+            ncount++;            
+          }          
        } else {
          for (size_t i = 0; i < N; i++) {
            const uint32_t missing_and_ploidy = missing_and_ploidy_info[i];
@@ -322,97 +322,173 @@ extern "C"
              geno = double(1.0 * missing_and_ploidy) - (p11 + p10);
              gmiss[select[ncount]-1] = 0;
              g[select[ncount]-1] = geno;
+             g2[select[ncount]-1] = geno;
              gmean += geno;
              if (geno > gmax) { gmax = geno; }
              if (geno < gmin) { gmin = geno; }
            } 
-           ncount++;
+           ncount++;           
+         }
+       }
+      
+          double gmean2=gmean;
+          gmean/=(double)(n-nmiss);                                
+          double missRate = nmiss / (double)(n * 1.0);
+
+          if (!isDupeID){
+            gmean2 = gmean2/(N-nmiss);         
+            vec gJ=J.t()*g.rows(0,N-1);
+            vec gJ_origin=gJ;
+            vec gmissJ=J.t()*gmiss.rows(0,N-1);
+            int tmp_miss_count=0;
+
+            for (size_t j=0; j<n; j++) {
+              if (gmissJ[j]==1) {
+              tmp_miss_count=tmp_miss_count+1;
+              gJ[j] = gmean2;
+              if (center=='n' && miss_method=='o') {gJ[j] = 0.0;} // remove missing genotypes
+              }
+            } 
+
+            if (skip_strata) {
+              writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << "NA\tNA\t";
+            } else {
+                writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-tmp_miss_count) << "\t" << gmean2/2.0 << "\t" ;
+                std::vector<double> strata_range(strataList_size);
+                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
+                      uvec strata_tmp = as<arma::uvec>(strata_list[strata_idx]);
+                      vec strata_gmiss = gmissJ.elem(strata_tmp-1);
+                      vec strata_g = gJ_origin.elem(strata_tmp-1);
+                      strata_AF(m,strata_idx) = mean(strata_g.elem(find(strata_gmiss == 0))) / 2.0;
+                      vec tmp;
+                      tmp= strata_g.elem(find(strata_gmiss == 0));
+                      strata_N(m,strata_idx) =tmp.n_elem;            
+                  }
+                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
+                      writeout << strata_N(m,strata_idx) << "\t";
+                      writeout << strata_AF(m,strata_idx) << "\t";
+                  }
+          
+              }  
+                     
+         double colsum_gJ=0;
+         for (size_t j=0; j<n; j++) {
+            if (gmissJ[j]==0) {
+            colsum_gJ=colsum_gJ+gJ[j];
+           }
            
          }
-       }
-      
-      
-       gmean/=(double)(n-nmiss);
-       double missRate = nmiss / (double)(n * 1.0);
-       
-       if (skip_strata) {
-         writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << "NA\tNA\t";
-       } else {
-         std::vector<double> strata_range(strataList_size);
-         for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
-           uvec strata_tmp = as<arma::uvec>(strata_list[strata_idx]);
-           uvec strata_gmiss = gmiss.elem(strata_tmp-1);
-           vec strata_g = g.elem(strata_tmp-1);
-           strata_range[strata_idx] = mean(strata_g.elem(find(strata_gmiss == 0))) / 2.0;
-         }
-         double strata_min = *min_element(strata_range.begin(), strata_range.end());
-         double strata_max = *max_element(strata_range.begin(), strata_range.end());
-         writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << strata_min << "\t" << strata_max << "\t";
-       }
-       
-       tmpout[npbidx] = writeout.str();
-       writeout.clear();
-       
-       for (size_t j=0; j<n; ++j) {
-         if (gmiss[j]==1) {
-           g[j] = gmean;
-           if (center=='n' && miss_method=='o') {g[j] = 0.0;} // remove missing genotypes
-         }
-         if (center=='c') {
-           g[j] -= gmean;
-         }
-       }
-       gmean /= 2.0; // convert mean to allele freq
-       if(((double)nmiss/n>missrate) || ((gmean<minmaf || gmean>maxmaf) && (gmean<1-maxmaf || gmean>1-minmaf))) { // monomorphic, missrate, MAF
-        snp_skip[npbidx] = 1;
-       } else {
-        G.col(npbidx) = g;
-       }
-  
-       npbidx++;
-       
-       
-       if((m+1 == end) || (npbidx == npb)) {
+
+           
+         for (size_t j=0; j<n; j++) {
+            if (center=='c') {
+             gJ[j] -= colsum_gJ/(n-tmp_miss_count);
+            }
+          }
           
+          double AF = gmean2/2.0;
+          if(((double)tmp_miss_count/n>missrate) || ((AF<minmaf || AF>maxmaf) && (AF<1-maxmaf || AF>1-minmaf))) { // monomorphic, missrate, MAF
+            snp_skip[npbidx] = 1;       
+          } 
+          else {
+              G.col(npbidx) = gJ;
+          }
+                                  
+        }
         
+        else  {
+           if (skip_strata) {
+              writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << "NA\tNA\t";
+            } else {
+                writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << gmean/2.0 << "\t" ;
+                std::vector<double> strata_range(strataList_size);
+                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
+                      uvec strata_tmp = as<arma::uvec>(strata_list[strata_idx]);
+                      uvec strata_gmiss = gmiss.elem(strata_tmp-1);
+                      vec strata_g = g.elem(strata_tmp-1);
+                      strata_AF(m,strata_idx) = mean(strata_g.elem(find(strata_gmiss == 0))) / 2.0;
+                      vec tmp;
+                      tmp= strata_g.elem(find(strata_gmiss == 0));
+                      strata_N(m,strata_idx) =tmp.n_elem;            
+                }
+                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
+                      writeout << strata_N(m,strata_idx) << "\t";
+                      writeout << strata_AF(m,strata_idx) << "\t";
+                }
+          
+              }         
+
+           for (size_t j=0; j<n; ++j) {
+            if (gmiss[j]==1) {
+             g[j] = gmean;
+             if (center=='n' && miss_method=='o') {g[j] = 0.0;} // remove missing genotypes
+            }
+            if (center=='c') {
+             g[j] -= gmean;
+            }
+          }
+          double AF= gmean / 2.0; // convert mean to allele freq
+          if(((double)nmiss/n>missrate) || ((AF<minmaf || AF>maxmaf) && (AF<1-maxmaf || AF>1-minmaf))) { // monomorphic, missrate, MAF
+            snp_skip[npbidx] = 1;            
+          } 
+          else {
+            G.col(npbidx) = g;
+          }
+         }
+        
+        tmpout[npbidx] = writeout.str();
+        writeout.clear();
+  
+        npbidx++;
+
+        if((m+1 == end) || (npbidx == npb)) {        
          if (npbidx != npb) {
            G.reshape(n, npbidx);
            snp_skip = snp_skip.rows(0,npbidx-1);
          }
+
          uvec snp_idx = find(snp_skip == 0);
          G = G.cols(snp_idx);
          int ng = G.n_cols; 
-         
-  
+
          mat IV_U;
+         mat IV_U1;
          mat IV_V_i;
+         mat IV_V_i1;
+         mat IV_E_i;
+         mat IV_GE_i;
+         mat STAT_JOINT_tmp;
          vec BETA_MAIN;
          vec STAT_INT;
+         vec STAT_JOINT;
          vec SE_MAIN;
          mat BETA_INT;
+         mat BETA_INT1;
          vec PVAL_MAIN(ng);
          PVAL_MAIN.fill(NA_REAL);
          vec PVAL_INT(ng);
          PVAL_INT.fill(NA_REAL);
          vec PVAL_JOINT(ng);
          PVAL_JOINT.fill(NA_REAL);
-         if (G.n_cols != 0) {
-           
+         size_t ngei1=ng*(ei+1);
+  
+         if (G.n_cols != 0) {           
            mat K;
-           for (int ei_idx = 0; ei_idx < ei; ei_idx++) {
+           for (int ei_idx = 0; ei_idx < ei+qi; ei_idx++) {
               mat tmpK = G.each_col() % E.col(ei_idx);
               K = join_horiz(K, tmpK);
-           } 
-            if (!isNullEC) {
-              uvec g_idx = linspace<uvec>(0, ng-1, ng);
-              for (int qi_idx = 0; qi_idx < qi; qi_idx++) {
-                mat tmpG = G.cols(g_idx);
-                tmpG = tmpG.each_col() % EC.col(qi_idx);
-                G = join_horiz(G, tmpG);
-              }
-            }
-            
-            vec U = G.t() * res;
+           }
+        
+           mat K1;
+           mat O(E.n_rows,1.00000,fill::ones);
+           mat E1;
+           E1=join_horiz(O,E);
+           for (int ei_idx = 0; ei_idx < ei+qi+1; ei_idx++) {
+              mat tmpK1 = G.each_col() % E1.col(ei_idx);
+              K1 = join_horiz(K1, tmpK1);
+           }
+           
+            vec U = G.t() * res;                           
             sp_mat Gsp(G);
             sp_mat PG;
             if (!isNullP) {
@@ -421,37 +497,21 @@ extern "C"
               sp_mat GSigma_iX =  Gsp.t() * Sigma_iX;
               PG = (Sigma_i.t() * Gsp) - (Sigma_iX * (GSigma_iX * cov.t()).t());
             }
-            mat GPG = (G.t() * PG)  % kron(ones(1+qi, 1+qi), mat(ng, ng, fill::eye));
-            
+
+            mat GPG = (G.t() * PG)  % kron(ones(1, 1), mat(ng, ng, fill::eye));         
             mat GPG_i;
             bool is_non_singular = inv(GPG_i, GPG);
             if (!is_non_singular) {
               GPG_i = pinv(GPG);
             }
-   
+
             mat V_i;
-            if (isNullEC) {
-              V_i = diagvec(GPG_i);
-            } else {
-              V_i = diagvec(GPG);
-              V_i = V_i.rows(0, ng-1);
-              double eps = DBL_EPSILON;
-              for (size_t tmp_v = 0; tmp_v < V_i.size(); tmp_v++) {
-                if (V_i[tmp_v] < eps) {
-                  V_i[tmp_v] = 0;
-                } else {
-                  V_i[tmp_v] =  1 / V_i[tmp_v];
-                }
-              }
-            }
-            
-            
+            V_i = diagvec(GPG_i);           
             vec V_MAIN_adj = diagvec(GPG_i);
-            V_MAIN_adj     = V_MAIN_adj.rows(0, ng-1);
-            
+            V_MAIN_adj = V_MAIN_adj.rows(0, ng-1);            
             vec BETA_MAIN_adj = GPG_i.t() * U; 
-            BETA_MAIN_adj     = BETA_MAIN_adj.rows(0, ng-1);
-            
+            BETA_MAIN_adj= BETA_MAIN_adj.rows(0, ng-1);
+
             vec STAT_MAIN_adj(ng);
             STAT_MAIN_adj.fill(NA_REAL);
             for (size_t s = 0; s < V_MAIN_adj.size(); s++) {
@@ -468,176 +528,223 @@ extern "C"
                 PVAL_MAIN[s] = Rf_pchisq(STAT_MAIN[s], 1, 0, 0);
               }
             }
-            
 
-            mat KPK;
+            mat KPK1;
             if (!isNullP) {
-              KPK = K.t() * (P.t() * K);
+              KPK1 = K1.t() * (P.t() * K1);
             } else {
-              mat KSigma_iX = K.t() * Sigma_iX;
-              KPK = (K.t() * (Sigma_i.t() * K)) - (KSigma_iX * (KSigma_iX * cov.t()).t());
+              mat KSigma_iX1 = K1.t() * Sigma_iX;
+              KPK1 = (K1.t() * (Sigma_i.t() * K1)) - (KSigma_iX1 * (KSigma_iX1 * cov.t()).t());
             }
-           
-            KPK = KPK % kron(ones(ei, ei), mat(ng, ng, fill::eye));
-            mat KPG = (K.t() * PG) % kron(ones(ei, 1+qi), mat(ng, ng, fill::eye));
-          
-            if (isNullEC) {
-              mat IV_U_kron = kron(ones(ei,1), mat(ng, ng, fill::eye));
-              IV_U   = IV_U_kron.each_col() % ((K.t() * res) - (KPG * BETA_MAIN));
-              mat IV = KPK - (KPG * (KPG * GPG_i.t()).t());
 
-              bool is_non_singular = inv(IV_V_i, IV);
-              if (!is_non_singular) {
-                IV_V_i = pinv(IV);
-              }
-              
-              BETA_INT = (IV_V_i.t() * IV_U);
-              STAT_INT = diagvec(IV_U.t() * BETA_INT);
-              for (size_t s = 0; s < STAT_INT.size(); s++) {
+            KPK1 = KPK1 % kron(ones(ei+qi+1, ei+qi+1), mat(ng, ng, fill::eye));
+            IV_V_i1=inv(KPK1);
+            mat cross_K_res = K1.t() *res;
+            mat IV_U_kron1 = kron(ones(ei+qi+1,1), mat(ng, ng, fill::eye)); 
+            IV_U1 = IV_U_kron1.each_col() % cross_K_res;
+            BETA_INT1 = (IV_V_i1 * IV_U1);
+            IV_E_i=inv(IV_V_i1(span(ng,ngei1-1),span(ng,ngei1-1))); 
+            IV_U=IV_E_i*BETA_INT1.rows(ng,ngei1-1);
+            STAT_INT=diagvec(IV_U.t()*BETA_INT1.rows(ng,ngei1-1));
+            IV_GE_i=inv(IV_V_i1(span(0,ngei1-1),span(0,ngei1-1))); 
+            STAT_JOINT_tmp=IV_GE_i*BETA_INT1.rows(0,ngei1-1);
+            STAT_JOINT=diagvec(STAT_JOINT_tmp.t()*BETA_INT1.rows(0,ngei1-1));
+
+            for (size_t s = 0; s < STAT_INT.size(); s++) {
                 PVAL_INT[s] = Rf_pchisq(STAT_INT[s], ei, 0, 0);
                 if (is_finite(PVAL_MAIN[s])) {
-                  PVAL_JOINT[s] = Rf_pchisq(STAT_MAIN[s] + STAT_INT[s], 1+ei, 0, 0);
+                  PVAL_JOINT[s] = Rf_pchisq(STAT_JOINT[s], 1+ei, 0, 0);
                 }
-              }
-            } else {
-              mat IV_U_kron = kron(ones(ei,1), mat(ng, ng, fill::eye));
-              IV_U   = IV_U_kron.each_col() % ((K.t() * res) - (KPG * (GPG_i.t() * U)));
-              mat IV = KPK - (KPG * (KPG * GPG_i.t()).t());
-              bool is_non_singular = inv(IV_V_i, IV);
-              if (!is_non_singular) {
-                IV_V_i = pinv(IV);
-              }
-              BETA_INT = (IV_V_i.t() * IV_U);
-              STAT_INT = diagvec(IV_U.t() * BETA_INT);
-              for (size_t s = 0; s < STAT_INT.size(); s++) {
-                PVAL_INT[s] = Rf_pchisq(STAT_INT[s], ei, 0, 0);
-                if (is_finite(PVAL_MAIN[s])) {
-                  PVAL_JOINT[s] = Rf_pchisq(STAT_MAIN[s] + STAT_INT[s], 1+ei, 0, 0);
-                }
-              }
-            }
-          
+            }   
          }
-     
-         
-         uvec b_idx = regspace<uvec>(0, ng, (ei-1) * ng);
-         
+    
+         uvec b_idx = regspace<uvec>(0, ng, (ei+qi-1) * ng);
+         uvec b_idx1 = regspace<uvec>(0, ng, (ei+qi) * ng);
          int ng_j = 0;
          for(size_t j=0; j<npbidx; ++j) {
            if(snp_skip[j] == 1) { // monomorphic, missrate, MAF
-             writefile << tmpout[j] << "NA\tNA\tNA\tNA\tNA\tNA";
-             
+             writefile << tmpout[j] << "NA\tNA\tNA\tNA\tNA\tNA";             
              if (metaOutput) {
-               for (int e=0; e < (ei + ei + (ei * (ei - 1) / 2)); e++) {
+               for (int e=0; e < (ei+qi + ei+qi + ((ei+qi) * (ei+qi - 1) / 2)); e++) {
                  writefile << "\tNA";
                } 
              }
              writefile << "\n";
            } 
-           else {
-         
+           else {         
              writefile << tmpout[j] << BETA_MAIN[ng_j] << "\t" << SE_MAIN[ng_j] << "\t";
              if (metaOutput) {
-               // Beta Int
-               for (int b=0; b < ei; b++) {
-                 int row = b_idx[b] + ng_j ;
-                 writefile << BETA_INT(row, ng_j ) << "\t";
+               // Beta Int the diaganol of BETA_INT1
+               for (int b=0; b < ei+qi+1; b++) {
+                int row = b_idx1[b] + ng_j ;
+                writefile << BETA_INT1(row, ng_j ) << "\t";                 
                }
       
-               // Var
-               for (int b=0; b < ei; b++) {
-                 int col = b_idx[b] + ng_j ;
-                 for (int d=0; d < ei; d++) {
+               // Var (the diaganol of IV_V_i1)                
+               for (int b=0; b < ei+qi+1; b++) {
+                 int col = b_idx1[b] + ng_j ;
+                 for (int d=0; d < ei+qi+1; d++) {
                    if(b == d) {
-                     int row = b_idx[d] + ng_j ;
-                     writefile << IV_V_i(row, col) << "\t";
-                   }
-                 }
+                    int row = b_idx1[d] + ng_j ; 
+                    writefile << sqrt(IV_V_i1(row, col)) << "\t";
+                  } 
+                }
                }
-       
-               // Cov
-               for (int b=0; b < ei; b++) {
-                 int col = b_idx[b] + ng_j ;
-                 for (int d=0; d < ei; d++) {
+
+               // Cov (the lower triangle elements of IV_V_i1)
+               for (int b=0; b < ei+qi+1; b++) {
+                 int col = b_idx1[b] + ng_j ;
+                 for (int d=0; d < ei+qi+1; d++) {
                    if(d > b) {
-                     int row = b_idx[d] + ng_j ;
-                     writefile << IV_V_i(row, col) << "\t";
-                   }
-                 }
-               }
-            
+                     int row = b_idx1[d] + ng_j ;
+                     writefile << IV_V_i1(row, col) << "\t";
+                    }
+                  }
+                }            
              }
-             
-             writefile << PVAL_MAIN[ng_j] << "\t" << STAT_INT[ng_j] << "\t" << PVAL_INT[ng_j] << "\t" <<  PVAL_JOINT[ng_j] << "\n";
+             else {
+               //generate a squre matrix with elements 1 to E1.col*E1.col, for example E1.col=2, matrix [1,3;2,4] 
+               //E1.col=3, matrix [1,4,7;2,5,8;3,6,9]
+               mat O(E.n_rows,1,fill::ones);
+               mat E1;
+               E1=join_horiz(O,E);
+               int ncolE=E1.n_cols;
+               mat split_mat(ncolE,ncolE);
+               for (int i=0; i<ncolE; i++) {
+                 for (int j=0; j<ncolE; j++)
+                 split_mat(i,j)=i+1-ncolE+ncolE*(j+1);
+                }
+                split_mat=split_mat(span(1,ei),span(1,ei));
+                if ( split_mat.n_elem ==1){
+               // Beta Int
+                    for (int b=0; b < ei+1; b++) {
+                        int row = b_idx1[b] + ng_j ;
+                        //NOT the first ng row 
+                        if (row>ng-1) {
+                        writefile << BETA_INT1(row, ng_j ) << "\t";
+                    }
+                }
+
+              // Var (the diaganol elements)                
+                    for (int b=0; b < ei+1; b++) {
+                        int col = b_idx1[b] + ng_j ;
+                        for (int d=0; d < ei+1; d++) {
+                           if(b == d ) {
+                                int row = b_idx1[d] + ng_j ; 
+                       //NOT the first ng row or first ng col
+                                if (row > ng-1  && col >ng-1) {
+                                    writefile << sqrt(IV_V_i1(row, col)) << "\t";
+                                }
+                            }
+                        }
+                    }               
+                }
+
+               else {
+                    // Beta Int
+                    for (int b=0; b < ei+1; b++) {
+                        int row = b_idx1[b] + ng_j ;
+                    //NOT the first ng row 
+                        if (row>ng-1) {
+                            writefile << BETA_INT1(row, ng_j ) << "\t";
+                        }
+                    }
+                    for (int b=0; b < ei+1; b++) {
+                        int col = b_idx1[b] + ng_j ;
+                        for (int d=0; d < ei+1; d++) {
+                            if(b == d ) {
+                              int row = b_idx1[d] + ng_j ; 
+                    //NOT the first ng row or first ng col
+                              if (row > ng-1  && col >ng-1) {
+                                writefile << sqrt(IV_V_i1(row, col)) << "\t";
+                               }
+                            }
+                        }
+                    }
+                    // Cov (the lower triangle )
+                    for (int b=0; b < ei+1; b++) {
+                        int col = b_idx1[b] + ng_j ;
+                        for (int d=0; d < ei+1; d++) {
+                            if(d > b) {
+                                int row = b_idx1[d] + ng_j ;
+                                if (row > ng-1  && col >ng-1) {
+                                    writefile << IV_V_i1(row, col) << "\t";
+                                }
+                            }
+                        }
+                    }
+                }
+             }
+             writefile << PVAL_MAIN[ng_j] <<  "\t" << PVAL_INT[ng_j] << "\t" <<  PVAL_JOINT[ng_j] << "\n";
              ng_j++;
            }
          }
-
-         npbidx = 0;
-         snp_skip.zeros();
-         G.reshape(n, npb);
-         
-       }
-      if((m+1) % 100000 == 0) {writefile << flush;}
-     }
-     if(end % 100000 != 0) {writefile << flush;}
-     (void)ret;
-     delete [] tmpout;
-     delete [] snpID;
-     delete [] rsID;
-     delete [] chrStr;
-     delete [] allele0;
-     delete [] allele1;
-     writefile.close();
-     writefile.clear();
-     libdeflate_free_decompressor(decompressor);
-     fclose(fp);
-     
-     return wrap(compute_time);
+            npbidx = 0;
+            snp_skip.zeros();
+            G.reshape(n, npb);   
+        }
+            if((m+1) % 100000 == 0) {writefile << flush;}        
+      }
+    
+        if(end % 100000 != 0) {writefile << flush;}
+        (void)ret;
+        delete [] tmpout;
+        delete [] snpID;
+        delete [] rsID;
+        delete [] chrStr;
+        delete [] allele0;
+        delete [] allele1;
+        writefile.close();
+        writefile.clear();
+        libdeflate_free_decompressor(decompressor);
+        fclose(fp); 
+        return wrap(compute_time);
     } 
-     catch( std::exception &ex ) {
-     forward_exception_to_r( ex );
-    } catch(...) {
-      ::Rf_error( "C++ exception (unknown reason)..." );
-    }
-    return R_NilValue;
-  }  
+      catch( std::exception &ex ) {
+         forward_exception_to_r( ex );
+        } 
+       catch(...) {
+          ::Rf_error( "C++ exception (unknown reason)..." );
+        }
+     return R_NilValue;
+}  
   
-  SEXP glmm_gei_bgen11(SEXP res_in, SEXP nullObj_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP missrate_in, SEXP miss_method_in, SEXP nperbatch_in, 
-                       SEXP ei_in, SEXP qi_in, SEXP isNullP_in, SEXP isNullEC_in, SEXP strata_in,
+  SEXP glmm_gei_bgen11(SEXP dupe_flag, SEXP res_in, SEXP nullObj_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP missrate_in, SEXP miss_method_in, SEXP nperbatch_in, 
+                       SEXP ei_in, SEXP qi_in, SEXP isNullP_in,  SEXP strata_in,
                        SEXP select_in, SEXP begin_in, SEXP end_in, SEXP pos_in, SEXP nbgen_in, SEXP compression_in, SEXP metaOutput_in) {
     try{
       
       bool isNullP = Rcpp::as<bool>(isNullP_in);
-      bool isNullEC = Rcpp::as<bool>(isNullEC_in);
       int ei = Rcpp::as<int>(ei_in);
       int qi = Rcpp::as<int>(qi_in);
-      
+      bool isDupeID = Rcpp::as<bool>(dupe_flag);
       arma::mat P;
       arma::sp_mat Sigma_i;
       arma::sp_mat Sigma_iX;
       arma::sp_mat cov;
+      arma::sp_mat J;
       
       Rcpp::List null_obj(nullObj_in);
       Rcpp::List strata_list(strata_in);
       int strataList_size = 0;
       bool skip_strata = true;
+
       if (strata_list[0]!=R_NilValue) {
         skip_strata = false;
         strataList_size = strata_list.size();
       }
+      
+      if (!isDupeID)
+      {
+        J = as<arma::sp_mat>(null_obj["J"]);
+      }
+ 
       arma::mat E = as<arma::mat>(null_obj["E"]);
       arma::mat EC;
-      if (!isNullEC) {
-        EC = as<arma::mat>(null_obj["EC"]);
-      } else {
-        (void)EC;
-      }
       
       if (!isNullP) {
         P = as<arma::mat>(null_obj["P"]);
-        (void)Sigma_i; (void)Sigma_iX; (void)cov;
-        
+        (void)Sigma_i; (void)Sigma_iX; (void)cov;        
       } else {
         Sigma_i = as<arma::sp_mat>(null_obj["Sigma_i"]);
         Sigma_iX = as<arma::sp_mat>(null_obj["Sigma_iX"]);
@@ -666,7 +773,6 @@ extern "C"
       string* tmpout = new string[npb];
       vector <string> biminfo;
       double gmean, geno, gmax, gmin;
-      //const double tol = 1e-5;
       size_t ncount, nmiss, npbidx = 0;
       double compute_time = 0.0;
       ofstream writefile(outfile.c_str(), std::ofstream::binary);
@@ -693,12 +799,11 @@ extern "C"
       FILE* fp = fopen(bgenfile.c_str(), "rb");
       fseek(fp, byte, SEEK_SET);
       
-      
       int ret;
-      
+      mat strata_AF(end,strataList_size);
+      mat strata_N(end,strataList_size);
       for (uint m = begin; m < end; m++) {
-        stringstream writeout;
-        
+        stringstream writeout;        
         uint Nprob; ret = fread(&Nprob, 4, 1, fp); 
         if (Nprob != Nbgen) {
           Rcout << "Error reading bgen file: Number of samples with genotype probabilities does not match number of samples in BGEN file. \n"; return R_NilValue;
@@ -729,8 +834,7 @@ extern "C"
         ret = fread(&LB, 4, 1, fp);
         ret = fread(allele0, 1, LB, fp); 
         allele0[LB] = '\0';
-        
-        
+                
         uint16_t* probs_start;
         if (compression == 1) {
           uint cLen; 
@@ -739,8 +843,7 @@ extern "C"
                         
           if (libdeflate_zlib_decompress(decompressor, &zBuf11[0], cLen, &shortBuf11[0], destLen1, NULL) != LIBDEFLATE_SUCCESS) {
             Rcpp::stop("Decompressing " + string(rsID) + "genotype block failed with libdeflate.");
-          }
-          
+          }          
           probs_start = reinterpret_cast<uint16_t*>(&shortBuf11[0]);
         }
         else {
@@ -748,24 +851,20 @@ extern "C"
           probs_start = reinterpret_cast<uint16_t*>(&zBuf11[0]);
         }
         
-        const double scale = 1.0 / 32768;
-        
-        
+        const double scale = 1.0 / 32768;        
         gmean=0.0;
         gmax=-100.0;
         gmin=100.0;
         nmiss=0;
         ncount = 0;
         for (size_t i = 0; i < Nbgen; i++) {
-          if (select[ncount] > 0) {
-            
+          if (select[ncount] > 0) {            
             double p11 = probs_start[3 * i] * scale;
             double p10 = probs_start[3 * i + 1] * scale;
             double p00 = probs_start[3 * i + 2] * scale;
             if (p11 == 0.0 && p10 == 0.0 && p00 == 0.0){
               gmiss[select[ncount]-1] = 1;
-              nmiss++;
-              
+              nmiss++;              
             } else {
               double pTot = p11 + p10 + p00;
               geno = (2 * p00 + p10) / pTot;
@@ -774,55 +873,116 @@ extern "C"
               gmean += geno;
               if (geno > gmax) { gmax = geno; }
               if (geno < gmin) { gmin = geno; }
-            } 
-            
+            }             
           }
           ncount++;
         }
         
+        double gmean2=gmean;
         gmean/=(double)(n-nmiss);
         double missRate = nmiss / (double)(n * 1.0);
-        
-        if (skip_strata) {
-          writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << "NA\tNA\t";
-        } else {
-          std::vector<double> strata_range(strataList_size);
-          for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
-            uvec strata_tmp = as<arma::uvec>(strata_list[strata_idx]);
-            uvec strata_gmiss = gmiss.elem(strata_tmp-1);
-            vec strata_g = g.elem(strata_tmp-1);
-            strata_range[strata_idx] = mean(strata_g.elem(find(strata_gmiss == 0))) / 2.0;
+     
+        if (!isDupeID){
+         gmean2 = gmean2/(Nbgen-nmiss);
+         vec gJ=J.t()*g.rows(0,Nbgen-1);
+         vec gJ_origin=gJ;
+         vec gmissJ=J.t()*gmiss.rows(0,Nbgen-1);
+
+         int tmp_miss_count=0;
+         for (size_t j=0; j<n; j++) {
+           if (gmissJ[j]==1) {
+            tmp_miss_count=tmp_miss_count+1;
+            gJ[j] = gmean2;
+            if (center=='n' && miss_method=='o') {gJ[j] = 0.0;} // remove missing genotypes
+           }
+         } 
+         if (skip_strata) {
+              writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << "NA\tNA\t";
+            } else {
+                writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-tmp_miss_count) << "\t" << gmean2/2.0 << "\t" ;
+                std::vector<double> strata_range(strataList_size);
+                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
+                      uvec strata_tmp = as<arma::uvec>(strata_list[strata_idx]);
+                      vec strata_gmiss = gmissJ.elem(strata_tmp-1);
+                      vec strata_g = gJ_origin.elem(strata_tmp-1);
+                      strata_AF(m,strata_idx) = mean(strata_g.elem(find(strata_gmiss == 0))) / 2.0;
+                      vec tmp;
+                      tmp= strata_g.elem(find(strata_gmiss == 0));
+                      strata_N(m,strata_idx) =tmp.n_elem;            
+                  }
+                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
+                      writeout << strata_N(m,strata_idx) << "\t";
+                      writeout << strata_AF(m,strata_idx) << "\t";
+                  }
+          
+              }  
+                     
+         double colsum_gJ=0;
+         for (size_t j=0; j<n; j++) {
+            if (gmissJ[j]==0) {
+                colsum_gJ=colsum_gJ+gJ[j];
+           }           
+         }
+
+        for (size_t j=0; j<n; j++) {
+            if (center=='c') {
+             gJ[j] -= colsum_gJ/(n-tmp_miss_count);
+            }
           }
-          double strata_min = *min_element(strata_range.begin(), strata_range.end());
-          double strata_max = *max_element(strata_range.begin(), strata_range.end());
-          writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << strata_min << "\t" << strata_max << "\t";
+
+        double AF = gmean2/2.0;
+
+        if(((double)tmp_miss_count/n>missrate) || ((AF<minmaf || AF>maxmaf) && (AF<1-maxmaf || AF>1-minmaf))) { // monomorphic, missrate, MAF
+            snp_skip[npbidx] = 1;      
         }
-        
+        else {
+              G.col(npbidx) = gJ;
+        }
+                                  
+    }
+         else  {
+           if (skip_strata) {
+              writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << "NA\tNA\t";
+            } else {
+                writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << gmean/2.0 << "\t" ;
+                std::vector<double> strata_range(strataList_size);
+                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
+                      uvec strata_tmp = as<arma::uvec>(strata_list[strata_idx]);
+                      uvec strata_gmiss = gmiss.elem(strata_tmp-1);
+                      vec strata_g = g.elem(strata_tmp-1);
+                      strata_AF(m,strata_idx) = mean(strata_g.elem(find(strata_gmiss == 0))) / 2.0;
+                      vec tmp;
+                      tmp= strata_g.elem(find(strata_gmiss == 0));
+                      strata_N(m,strata_idx) =tmp.n_elem;            
+                  }
+                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
+                      writeout << strata_N(m,strata_idx) << "\t";
+                      writeout << strata_AF(m,strata_idx) << "\t";
+                }
+              }         
+
+           for (size_t j=0; j<n; ++j) {
+            if (gmiss[j]==1) {
+             g[j] = gmean;
+             if (center=='n' && miss_method=='o') {g[j] = 0.0;} // remove missing genotypes
+            }
+            if (center=='c') {
+             g[j] -= gmean;
+            }
+           }
+          double AF= gmean / 2.0; // convert mean to allele freq
+          if(((double)nmiss/n>missrate) || ((AF<minmaf || AF>maxmaf) && (AF<1-maxmaf || AF>1-minmaf))) { // monomorphic, missrate, MAF
+            snp_skip[npbidx] = 1;           
+          } else {
+            G.col(npbidx) = g;
+          }
+        }
+
         tmpout[npbidx] = writeout.str();
         writeout.clear();
-        
-        for (size_t j=0; j<n; ++j) {
-          if (gmiss[j]==1) {
-            g[j] = gmean;
-            if (center=='n' && miss_method=='o') {g[j] = 0.0;} // remove missing genotypes
-          }
-          if (center=='c') {
-            g[j] -= gmean;
-          }
-        }
-        gmean /= 2.0; // convert mean to allele freq
-        if(((double)nmiss/n>missrate) || ((gmean<minmaf || gmean>maxmaf) && (gmean<1-maxmaf || gmean>1-minmaf))) { // monomorphic, missrate, MAF
-          snp_skip[npbidx] = 1;
-        } else {
-          G.col(npbidx) = g;
-        }
-        
         npbidx++;
-        
-        
-        if((m+1 == end) || (npbidx == npb)) {
-          
-          
+                
+        if((m+1 == end) || (npbidx == npb)) {          
           if (npbidx != npb) {
             G.reshape(n, npbidx);
             snp_skip = snp_skip.rows(0,npbidx-1);
@@ -830,37 +990,44 @@ extern "C"
           uvec snp_idx = find(snp_skip == 0);
           G = G.cols(snp_idx);
           int ng = G.n_cols; 
-          
-          
+                    
           mat IV_U;
+          mat IV_U1;
           mat IV_V_i;
+          mat IV_V_i1;
+          mat IV_E_i;
+          mat IV_GE_i;
+          mat STAT_JOINT_tmp;
           vec BETA_MAIN;
           vec STAT_INT;
+          vec STAT_JOINT;
           vec SE_MAIN;
           mat BETA_INT;
+          mat BETA_INT1;
           vec PVAL_MAIN(ng);
           PVAL_MAIN.fill(NA_REAL);
           vec PVAL_INT(ng);
           PVAL_INT.fill(NA_REAL);
           vec PVAL_JOINT(ng);
           PVAL_JOINT.fill(NA_REAL);
+          size_t ngei1=ng*(ei+1);
+  
           if (G.n_cols != 0) {
             mat K;
-            for (int ei_idx = 0; ei_idx < ei; ei_idx++) {
+            for (int ei_idx = 0; ei_idx < ei+qi; ei_idx++) {
               mat tmpK = G.each_col() % E.col(ei_idx);
               K = join_horiz(K, tmpK);
             } 
-            if (!isNullEC) {
-              uvec g_idx = linspace<uvec>(0, ng-1, ng);
-              for (int qi_idx = 0; qi_idx < qi; qi_idx++) {
-                mat tmpG = G.cols(g_idx);
-                tmpG = tmpG.each_col() % EC.col(qi_idx);
-                G = join_horiz(G, tmpG);
-              }
+            mat K1;
+            mat O(E.n_rows,1,fill::ones);
+            mat E1;
+            E1=join_horiz(O,E);
+            for (int ei_idx = 0; ei_idx < ei+qi+1; ei_idx++) {
+              mat tmpK1 = G.each_col() % E1.col(ei_idx);
+              K1 = join_horiz(K1, tmpK1);
             }
-            ;
-            vec U = G.t() * res;
-            ;
+
+            vec U = G.t() * res;            
             sp_mat Gsp(G);
             sp_mat PG;
             if (!isNullP) {
@@ -869,8 +1036,8 @@ extern "C"
               sp_mat GSigma_iX =  Gsp.t() * Sigma_iX;
               PG = (Sigma_i.t() * Gsp) - (Sigma_iX * (GSigma_iX * cov.t()).t());
             }
-            ;
-            mat GPG = (G.t() * PG)  % kron(ones(1+qi, 1+qi), mat(ng, ng, fill::eye));
+            
+            mat GPG = (G.t() * PG)  % kron(ones(1, 1), mat(ng, ng, fill::eye));
             mat GPG_i;
             bool is_non_singular = inv(GPG_i, GPG);
             if (!is_non_singular) {
@@ -878,28 +1045,11 @@ extern "C"
             }
             
             mat V_i;
-            if (isNullEC) {
-              V_i = diagvec(GPG_i);
-            } else {
-              V_i = diagvec(GPG);
-              V_i = V_i.rows(0, ng-1);
-              double eps = DBL_EPSILON;
-              for (size_t tmp_v = 0; tmp_v < V_i.size(); tmp_v++) {
-                if (V_i[tmp_v] < eps) {
-                  V_i[tmp_v] = 0;
-                } else {
-                  V_i[tmp_v] =  1 / V_i[tmp_v];
-                }
-              }
-            }
-            
-            ;
+            V_i = diagvec(GPG_i);    
             vec V_MAIN_adj = diagvec(GPG_i);
-            V_MAIN_adj     = V_MAIN_adj.rows(0, ng-1);
-            
+            V_MAIN_adj     = V_MAIN_adj.rows(0, ng-1);            
             vec BETA_MAIN_adj = GPG_i.t() * U; 
-            BETA_MAIN_adj     = BETA_MAIN_adj.rows(0, ng-1);
-            
+            BETA_MAIN_adj     = BETA_MAIN_adj.rows(0, ng-1);           
             vec STAT_MAIN_adj(ng);
             STAT_MAIN_adj.fill(NA_REAL);
             for (size_t s = 0; s < V_MAIN_adj.size(); s++) {
@@ -917,112 +1067,156 @@ extern "C"
               }
             }
             
-            
-            mat KPK;
+            mat KPK1;
             if (!isNullP) {
-              KPK = K.t() * (P.t() * K);
+              KPK1 = K1.t() * (P.t() * K1);
             } else {
-              mat KSigma_iX = K.t() * Sigma_iX;
-              KPK = (K.t() * (Sigma_i.t() * K)) - (KSigma_iX * (KSigma_iX * cov.t()).t());
+              mat KSigma_iX1 = K1.t() * Sigma_iX;
+              KPK1 = (K1.t() * (Sigma_i.t() * K1)) - (KSigma_iX1 * (KSigma_iX1 * cov.t()).t());
             }
-            
-            KPK = KPK % kron(ones(ei, ei), mat(ng, ng, fill::eye));
-            mat KPG = (K.t() * PG) % kron(ones(ei, 1+qi), mat(ng, ng, fill::eye));
-            
-            
-            if (isNullEC) {
-              mat IV_U_kron = kron(ones(ei,1), mat(ng, ng, fill::eye));
-              IV_U = IV_U_kron.each_col() % ((K.t() * res) - (KPG * BETA_MAIN));
-              mat IV = KPK - (KPG * (KPG * GPG_i.t()).t());
-              bool is_non_singular = inv(IV_V_i, IV);
-              if (!is_non_singular) {
-                IV_V_i = pinv(IV);
-              }
-              BETA_INT = (IV_V_i.t() * IV_U);
-              STAT_INT = diagvec(IV_U.t() * BETA_INT);
-              for (size_t s = 0; s < STAT_INT.size(); s++) {
+
+            KPK1 = KPK1 % kron(ones(ei+qi+1, ei+qi+1), mat(ng, ng, fill::eye));
+            IV_V_i1=inv(KPK1);            
+            mat cross_K_res = K1.t() *res;
+            mat IV_U_kron1 = kron(ones(ei+qi+1,1), mat(ng, ng, fill::eye));
+            IV_U1 = IV_U_kron1.each_col() % cross_K_res;
+            BETA_INT1 = (IV_V_i1 * IV_U1);
+            IV_E_i=inv(IV_V_i1(span(ng,ngei1-1),span(ng,ngei1-1))); 
+            IV_U=IV_E_i*BETA_INT1.rows(ng,ngei1-1);
+            STAT_INT=diagvec(IV_U.t()*BETA_INT1.rows(ng,ngei1-1));
+            IV_GE_i=inv(IV_V_i1(span(0,ngei1-1),span(0,ngei1-1))); 
+            STAT_JOINT_tmp=IV_GE_i*BETA_INT1.rows(0,ngei1-1);
+            STAT_JOINT=diagvec(STAT_JOINT_tmp.t()*BETA_INT1.rows(0,ngei1-1));
+
+            for (size_t s = 0; s < STAT_INT.size(); s++) {
                 PVAL_INT[s] = Rf_pchisq(STAT_INT[s], ei, 0, 0);
                 if (is_finite(PVAL_MAIN[s])) {
-                  PVAL_JOINT[s] = Rf_pchisq(STAT_MAIN[s] + STAT_INT[s], 1+ei, 0, 0);
+                  PVAL_JOINT[s] = Rf_pchisq(STAT_JOINT[s], 1+ei, 0, 0);
                 }
               }
               
-            } else {
-              mat IV_U_kron = kron(ones(ei,1), mat(ng, ng, fill::eye));
-              IV_U = IV_U_kron.each_col() % ((K.t() * res) - (KPG * (GPG_i.t() * U)));
-              mat IV = KPK - (KPG * (KPG * GPG_i.t()).t());
-              bool is_non_singular = inv(IV_V_i, IV);
-              if (!is_non_singular ) {
-                IV_V_i = pinv(IV);
-              }
-              BETA_INT = (IV_V_i.t() * IV_U);
-              STAT_INT = diagvec(IV_U.t() * BETA_INT);
-              for (size_t s = 0; s < STAT_INT.size(); s++) {
-                PVAL_INT[s] = Rf_pchisq(STAT_INT[s], ei, 0, 0);
-                if (is_finite(PVAL_MAIN[s])) {
-                  PVAL_JOINT[s] = Rf_pchisq(STAT_MAIN[s] + STAT_INT[s], 1+ei, 0, 0);
-                }
-              }
-            }
-            
-            
-            
-            
-          }
+            } 
           
-          uvec b_idx = regspace<uvec>(0, ng, (ei-1) * ng);
+          uvec b_idx = regspace<uvec>(0, ng, (ei+qi-1) * ng);
+          uvec b_idx1 = regspace<uvec>(0, ng, (ei+qi) * ng);
           int ng_j = 0;
           for(size_t j=0; j<npbidx; ++j) {
             if(snp_skip[j] == 1) { // monomorphic, missrate, MAF
               writefile << tmpout[j] << "NA\tNA\tNA\tNA\tNA\tNA";
-              
               if (metaOutput) {
-                for (int e=0; e < (ei + ei + (ei * (ei - 1) / 2)); e++) {
-                  writefile << "\tNA";
-                }
-              }
-              for (int e=0; e < (ei + (ei*ei)); e++) {
-                writefile << "\tNA";
+               for (int e=0; e < (ei+qi + ei+qi + ((ei+qi) * (ei+qi - 1) / 2)); e++) {
+                 writefile << "\tNA";
+                } 
               }
               writefile << "\n";
             } 
             else {
               writefile << tmpout[j] << BETA_MAIN[ng_j] << "\t" << SE_MAIN[ng_j] << "\t";
-              
               if (metaOutput) {
-                // Beta Int
-                for (int b=0; b < ei; b++) {
-                  int row = b_idx[b] + ng_j ;
-                  writefile << BETA_INT(row, ng_j ) << "\t";
+               // Beta Int the diaganol of BETA_INT1
+               for (int b=0; b < ei+qi+1; b++) {
+                 int row = b_idx1[b] + ng_j ;
+                 writefile << BETA_INT1(row, ng_j ) << "\t";                 
                 }
-                
-                // Var
-                for (int b=0; b < ei; b++) {
-                  int col = b_idx[b] + ng_j ;
-                  for (int d=0; d < ei; d++) {
-                    if(b == d) {
-                      int row = b_idx[d] + ng_j ;
-                      writefile << IV_V_i(row, col) << "\t";
-                    }
+      
+               // Var (the diaganol of IV_V_i1)                
+               for (int b=0; b < ei+qi+1; b++) {
+                 int col = b_idx1[b] + ng_j ;
+                 for (int d=0; d < ei+qi+1; d++) {
+                   if(b == d) {
+                     int row = b_idx1[d] + ng_j ;                      
+                     writefile << sqrt(IV_V_i1(row, col)) << "\t";                     
+                    } 
                   }
                 }
-                
-                // Cov
-                for (int b=0; b < ei; b++) {
-                  int col = b_idx[b] + ng_j ;
-                  for (int d=0; d < ei; d++) {
-                    if(d > b) {
-                      int row = b_idx[d] + ng_j ;
-                      writefile << IV_V_i(row, col) << "\t";
+       
+               // Cov (the lower triangle elements of IV_V_i1)
+               for (int b=0; b < ei+qi+1; b++) {
+                 int col = b_idx1[b] + ng_j ;
+                 for (int d=0; d < ei+qi+1; d++) {
+                   if(d > b) {
+                     int row = b_idx1[d] + ng_j ;
+                     writefile << IV_V_i1(row, col) << "\t";
                     }
                   }
+                }            
+             }
+             else {
+               //generate a squre matrix with elements 1 to E1.col*E1.col, for example E1.col=2, matrix [1,3;2,4] 
+               //E1.col=3, matrix [1,4,7;2,5,8;3,6,9]
+               mat O(E.n_rows,1,fill::ones);
+               mat E1;
+               E1=join_horiz(O,E);
+               int ncolE=E1.n_cols;
+               mat split_mat(ncolE,ncolE);
+               for (int i=0; i<ncolE; i++) {
+                 for (int j=0; j<ncolE; j++)
+                 split_mat(i,j)=i+1-ncolE+ncolE*(j+1);
                 }
-                
-              }
-              writefile << PVAL_MAIN[ng_j] << "\t" << STAT_INT[ng_j] << "\t" << PVAL_INT[ng_j] << "\t" <<  PVAL_JOINT[ng_j] << "\n";
+                split_mat=split_mat(span(1,ei),span(1,ei));
+                if ( split_mat.n_elem ==1){
+               // Beta Int
+                 for (int b=0; b < ei+1; b++) {
+                   int row = b_idx1[b] + ng_j ;
+                   //NOT the first ng row 
+                   if (row>ng-1) {
+                      writefile << BETA_INT1(row, ng_j ) << "\t";
+                    }
+                 }
+
+              // Var (the diaganol elements)                
+                 for (int b=0; b < ei+1; b++) {
+                     int col = b_idx1[b] + ng_j ;
+                     for (int d=0; d < ei+1; d++) {
+                       if(b == d ) {
+                       int row = b_idx1[d] + ng_j ; 
+                       //NOT the first ng row or first ng col
+                       if (row > ng-1  && col >ng-1) {
+                        writefile << sqrt(IV_V_i1(row, col)) << "\t";
+                       }
+                     }
+                   }
+                }
+            }
+               else {
+                        // Beta Int
+                       for (int b=0; b < ei+1; b++) {
+                          int row = b_idx1[b] + ng_j ;
+                   //NOT the first ng row 
+                           if (row>ng-1) {
+                               writefile << BETA_INT1(row, ng_j ) << "\t";
+                            }
+                        }
+                        for (int b=0; b < ei+1; b++) {
+                            int col = b_idx1[b] + ng_j ;
+                            for (int d=0; d < ei+1; d++) {
+                               if(b == d ) {
+                                  int row = b_idx1[d] + ng_j ; 
+                       //NOT the first ng row or first ng col
+                                   if (row > ng-1  && col >ng-1) {
+                                     writefile << sqrt(IV_V_i1(row, col)) << "\t";
+                                    }
+                                }
+                            }
+                        }
+                        // Cov (the lower triangle )
+                         for (int b=0; b < ei+1; b++) {
+                               int col = b_idx1[b] + ng_j ;
+                                for (int d=0; d < ei+1; d++) {
+                                   if(d > b) {
+                                      int row = b_idx1[d] + ng_j ;
+                                       if (row > ng-1  && col >ng-1) {
+                                         writefile << IV_V_i1(row, col) << "\t";
+                                       }
+                                    }
+                                }
+                           }
+                }
+             }
+              writefile << PVAL_MAIN[ng_j] << "\t"  << PVAL_INT[ng_j] << "\t" <<  PVAL_JOINT[ng_j] << "\n";
               ng_j++;
             }
-          }
+        }
           
           npbidx = 0; 
           snp_skip.zeros();
@@ -1030,9 +1224,8 @@ extern "C"
           
         }
         if((m+1) % 100000 == 0) {writefile << flush;}
-      }
-      
-      
+    }
+  
       if(end % 100000 != 0) {writefile << flush;}
       (void)ret;
       delete [] tmpout;
@@ -1053,5 +1246,5 @@ extern "C"
       ::Rf_error( "C++ exception (unknown reason)..." );
     }
     return R_NilValue;
-  }  
+  } 
 } // end of extern "C"
