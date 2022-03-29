@@ -231,6 +231,7 @@ test_that("cross-sectional gaussian", {
   
   ### multi-thread
   ### obj1
+  skip_on_cran()
   obj1.outfile.gds.tmp <- tempfile()
   glmm.gei(null.obj=obj1, interaction="sex", geno.file=gdsfile, outfile=obj1.outfile.gds.tmp, ncores=2)
   obj1.gds.tmp <- read.table(obj1.outfile.gds.tmp, header = T, as.is = T)
