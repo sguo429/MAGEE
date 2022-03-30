@@ -91,7 +91,6 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
       strata.list <- NULL
     }
 
-   capture.output(strata.list,file="GDS_stratalist.txt")
     
     
     if (class(geno.file)[1] != "SeqVarGDSClass") {
@@ -498,7 +497,6 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           
           GPG_i <- try(solve(GPG), silent = TRUE)
           if(class(GPG_i)[1] == "try-error") GPG_i <- MASS::ginv(GPG)
-          capture.output(GPG_i,file = "GDS_GPG_i.txt")
           V_i <- diag(GPG_i)
 
           BETA.MAIN <- V_i * U
@@ -548,7 +546,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           IV.GE_i <- try(solve(IV.V_i[1:ngei1, 1:ngei1]), silent = TRUE)
           if(class(IV.GE_i)[1] == "try-error") IV.GE_i <- try(MASS::ginv(IV.V_i[1:ngei1, 1:ngei1]), silent = TRUE)
           if(class(IV.GE_i)[1] == "try-error") {
-            fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, meta.header, totalCol, tmp_idx, include)
+            fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
             tmp_idx <<- fix_out[[1]]
             include <<- fix_out[[2]]
             return(fix_out[[3]])
@@ -759,7 +757,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
          } else {
         interaction2 <- paste0("G-", interaction[1:ei])
         if (ei != 1) {
-          cov.header = matrix(paste(rep(paste0("Cov_Beta_", interaction2), each = ei), interaction, sep = "_"), ei, ei)
+          cov.header = matrix(paste(rep(paste0("Cov_Beta_", interaction2), each = ei), interaction, sep = "_G-"), ei, ei)
           ss.header = c(paste0("Beta_", interaction2), paste0("SE_Beta_", interaction2), cov.header[lower.tri(cov.header)])
         } else {
           ss.header = c(paste0("Beta_", interaction2), paste0("SE_Beta_", interaction2))
@@ -813,7 +811,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
 }
 
 
-fix.dgesdd <- function(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, meta.header, totalCol, tmp_idx, include) {
+fix.dgesdd <- function(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include) {
   ei1 <- ei+1
   tmp_idx0 <- tmp_idx
   tmp.out <- lapply(tmp2.variant.idx, function(j) {
