@@ -7,16 +7,16 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
   Sys.setenv(MKL_NUM_THREADS = 1)
   if(!grepl("\\.gds$|\\.bgen$", geno.file[1])) stop("Error: only .gds and .bgen format is supported in geno.file!")
   if(!class(null.obj) %in% c("glmmkin", "glmmkin.multi")) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
-  if(class(null.obj) == "glmmkin.multi") stop("Error: currently null.obj must be a class glmmkin object, glmmkin.multi not yet supported...")
+  if(inherits(null.obj,"glmmkin.multi")) stop("Error: currently null.obj must be a class glmmkin object, glmmkin.multi not yet supported...")
   n.pheno <- null.obj$n.pheno  
   missing.method <- try(match.arg(missing.method, c("impute2mean", "omit")))
-  if(class(missing.method) == "try-error") stop("Error: \"missing.method\" must be \"impute2mean\" or \"omit\".")
+  if(inherits(missing.method,"try-error")) stop("Error: \"missing.method\" must be \"impute2mean\" or \"omit\".")
   if(!class(interaction) %in% c("integer", "numeric", "character")) stop("Error: \"interaction\" should be an integer, numeric, or character vector.")
   residuals <- null.obj$scaled.residuals
   qi <- length(interaction.covariates)
   ei <- length(interaction)
   ei1 <- ei+1
-  if(class(interaction)=="character") {
+  if(inherits(interaction,"character")) {
     if(!is.null(interaction.covariates)) {
       if(any(interaction.covariates %in% interaction)) {stop("there are interaction.covariates also specified as interaction.")}
       interaction <- c(interaction, interaction.covariates)
