@@ -321,6 +321,7 @@ test_that("cross-sectional gaussian", {
   
   ### re-order pheno id
   ### obj1
+  #skip_on_cran()
   idx <- sample(nrow(pheno))
   pheno <- pheno[idx, ]
   obj1 <- glmmkin(trait ~ age + sex, data = pheno, kins = kins, id = "id", family = gaussian(link = "identity"))
@@ -379,7 +380,7 @@ test_that("cross-sectional gaussian", {
   expect_equal(obj3.gds, tmpout)
   
   obj3.outfile.bgen <- tempfile()
-  glmm.gei(null.obj=obj3, interaction=c("sex","obese"), geno.file=bgenfile, bgen.samplefile = samplefile, outfile=obj3.outfile.bgen)
+  glmm.gei(null.obj=obj3, interaction=c("sex","obese"), geno.file=bgenfile, bgen.samplefile = samplefile, outfile=obj3.outfile.bgen,nperbatch=2)
   tmpout <- read.table(obj3.outfile.bgen, header = T, as.is = T)
   expect_equal(obj3.bgen[-83,], tmpout[-83,])
   unlink(c(obj3.outfile.gds, obj3.outfile.bgen))
@@ -481,7 +482,7 @@ test_that("cross-sectional gaussian", {
   expect_equal(obj3.gds, tmpout)
   
   obj3.outfile.bgen <- tempfile()
-  glmm.gei(null.obj=obj3, interaction=c("sex","obese"), geno.file=bgenfile, bgen.samplefile = samplefile, outfile=obj3.outfile.bgen)
+  glmm.gei(null.obj=obj3, interaction=c("sex","obese"), geno.file=bgenfile, bgen.samplefile = samplefile, outfile=obj3.outfile.bgen,nperbatch=2)
   tmpout <- read.table(obj3.outfile.bgen, header = T, as.is = T)
   expect_equal(obj3.bgen[-83,], tmpout[-83,])
   unlink(c(obj3.outfile.gds, obj3.outfile.bgen))
