@@ -538,23 +538,61 @@ extern "C"
             }
 
             KPK1 = KPK1 % kron(ones(ei+qi+1, ei+qi+1), mat(ng, ng, fill::eye));
-            IV_V_i1=inv(KPK1);
+
+            bool is_non_singular_K = inv(IV_V_i1,KPK1);
+            if (!is_non_singular_K) {
+              IV_V_i1=pinv(KPK1);
+            }
+            //IV_V_i1=inv(KPK1);
             mat cross_K_res = K1.t() *res;
             mat IV_U_kron1 = kron(ones(ei+qi+1,1), mat(ng, ng, fill::eye)); 
             IV_U1 = IV_U_kron1.each_col() % cross_K_res;
             BETA_INT1 = (IV_V_i1 * IV_U1);
-            IV_E_i=inv(IV_V_i1(span(ng,ngei1-1),span(ng,ngei1-1))); 
+
+            bool is_non_singular_IV_V1 = inv(IV_E_i,IV_V_i1(span(ng,ngei1-1),span(ng,ngei1-1)));
+            if (!is_non_singular_IV_V1) {
+              IV_E_i=pinv(IV_V_i1(span(ng,ngei1-1),span(ng,ngei1-1))); 
+            }
+            //IV_E_i=inv(IV_V_i1(span(ng,ngei1-1),span(ng,ngei1-1))); 
             IV_U=IV_E_i*BETA_INT1.rows(ng,ngei1-1);
             STAT_INT=diagvec(IV_U.t()*BETA_INT1.rows(ng,ngei1-1));
-            IV_GE_i=inv(IV_V_i1(span(0,ngei1-1),span(0,ngei1-1))); 
-            STAT_JOINT_tmp=IV_GE_i*BETA_INT1.rows(0,ngei1-1);
-            STAT_JOINT=diagvec(STAT_JOINT_tmp.t()*BETA_INT1.rows(0,ngei1-1));
+
+            //bool is_non_singular_IV_V2 = inv(IV_GE_i,IV_V_i1(span(0,ngei1-1),span(0,ngei1-1)));
+            //if (!is_non_singular_IV_V2) {
+              try {
+                IV_GE_i=inv(IV_V_i1(span(0,ngei1-1),span(0,ngei1-1))); 
+                //STAT_JOINT_tmp=solve(IV_V_i1(span(0,ngei1-1),span(0,ngei1-1)),BETA_INT1.rows(0,ngei1-1));
+                STAT_JOINT_tmp=IV_GE_i*BETA_INT1.rows(0,ngei1-1);
+                STAT_JOINT=diagvec(STAT_JOINT_tmp.t()*BETA_INT1.rows(0,ngei1-1));
+            
+
+                for (size_t s = 0; s < STAT_INT.size(); s++) {
+                    PVAL_INT[s] = Rf_pchisq(STAT_INT[s], ei, 0, 0);
+                    if (is_finite(PVAL_MAIN[s])) {
+                      PVAL_JOINT[s] = Rf_pchisq(STAT_JOINT[s], 1+ei, 0, 0);
+                    }
+                  } 
+              } 
+            //}
+            catch (const runtime_error& error){
+                 Rcout << "It is singular matrix "<< "\n";
+                 for (size_t s = 0; s < STAT_INT.size(); s++) {
+                    PVAL_JOINT[s]=DBL_EPSILON;
+                 }
+                 
+            }
+            
+
+            //IV_GE_i=inv(IV_V_i1(span(0,ngei1-1),span(0,ngei1-1))); 
+            //STAT_JOINT_tmp=IV_GE_i*BETA_INT1.rows(0,ngei1-1);
+            //STAT_JOINT=diagvec(STAT_JOINT_tmp.t()*BETA_INT1.rows(0,ngei1-1));
+            
 
             for (size_t s = 0; s < STAT_INT.size(); s++) {
                 PVAL_INT[s] = Rf_pchisq(STAT_INT[s], ei, 0, 0);
-                if (is_finite(PVAL_MAIN[s])) {
-                  PVAL_JOINT[s] = Rf_pchisq(STAT_JOINT[s], 1+ei, 0, 0);
-                }
+                //if (is_finite(PVAL_MAIN[s])) {
+                  //PVAL_JOINT[s] = Rf_pchisq((STAT_MAIN[s]+STAT_INT[s]), 1+ei, 0, 0);
+                //}
             }   
          }
     
@@ -676,6 +714,7 @@ extern "C"
                 }
              }
              writefile << PVAL_MAIN[ng_j] <<  "\t" << PVAL_INT[ng_j] << "\t" <<  PVAL_JOINT[ng_j] << "\n";
+             //writefile << PVAL_MAIN[ng_j] <<  "\t" << PVAL_INT[ng_j] << "\t" <<  STAT_JOINT[ng_j] << "\n";
              ng_j++;
            }
          }
@@ -1090,9 +1129,9 @@ extern "C"
 
             for (size_t s = 0; s < STAT_INT.size(); s++) {
                 PVAL_INT[s] = Rf_pchisq(STAT_INT[s], ei, 0, 0);
-                if (is_finite(PVAL_MAIN[s])) {
+                //if (is_finite(PVAL_MAIN[s])) {
                   PVAL_JOINT[s] = Rf_pchisq(STAT_JOINT[s], 1+ei, 0, 0);
-                }
+                //}
               }
               
             } 
