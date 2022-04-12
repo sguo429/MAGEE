@@ -38,8 +38,8 @@ morekeywords={}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
-\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.1.0}
-\date{March 24, 2022}
+\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.1.1}
+\date{April,12 2022}
 \author{Xinyu Wang\\Human Genetics Center\\Dept. of Biostatistics and Data Science\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Xinyu.Wang@uth.tmc.edu\\\\Han Chen\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\Center for Precision Health\\School of Biomedical Informatics\\The University of Texas Health Science Center at Houston\\Email: Han.Chen.2@uth.tmc.edu\\\\Duy Pham\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: duy.t.pham@uth.tmc.edu\\\\Kenneth Westerman\\Department of Medicine\\Clinical and Translational Epidemiology Unit\\Mongan Institute\\Massachusetts General Hospital\\Email: KEWESTERMAN@mgh.harvard.edu\\\\Cong Pan\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: cong.pan@uth.tmc.edu} 
 
 \maketitle
