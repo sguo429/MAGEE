@@ -372,6 +372,10 @@ Initial public release of \textit{MAGEE}.
 \item Updated automatic tests for \textbf{glmm.gei}.
 \end{enumerate}
 
+\subsection{Version 1.1.1 (April 12, 2022)}
+\begin{enumerate}
+\item Fixed bugs on inverse of singular matrix \textbf{glmm.gei}.
+\end{enumerate}
 
 \section{Contact}
 Please refer to the R help document of \textit{MAGEE} for specific questions about each function. For comments, suggestions, bug reports and questions, please contact Han Chen (Han.Chen.2@uth.tmc.edu). For bug reports, please include an example to reproduce the problem without having to access your confidential data.
