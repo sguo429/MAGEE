@@ -7,7 +7,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
   if(!class(null.obj) %in% c("glmmkin", "glmmkin.multi")) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
   n.pheno <- null.obj$n.pheno
   missing.method <- try(match.arg(missing.method, c("impute2mean", "impute2zero")))
-  if(class(missing.method) == "try-error") stop("Error: \"missing.method\" must be \"impute2mean\" or \"impute2zero\".")
+  if(inherits(missing.method, "try-error")) stop("Error: \"missing.method\" must be \"impute2mean\" or \"impute2zero\".")
   if(any(!tests %in% c("MV", "MF", "IV", "IF", "JV", "JF", "JD"))) stop("Error: \"tests\" should only include \"MV\" for the main effect variance component test, \"MF\" for the main effect combined test of the burden and variance component tests using Fisher\'s method, \"IV\" for the interaction variance component test, \"IF\" for the interaction combined test of the burden and variance component tests using Fisher\'s method, \"JV\" for the joint variance component test for main effect and interaction, \"JF\" for the joint combined test of the burden and variance component tests for main effect and interaction using Fisher\'s method, or \"JD\" for the joint combined test of the burden and variance component tests for main effect and interaction using double Fisher\'s method.")
   MV <- "MV" %in% tests
   MF <- "MF" %in% tests
@@ -21,7 +21,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
   n <- length(unique(null.obj$id_include))
   qi <- length(interaction.covariates) # number of covariates with interaction effects but we don't test
   ei <- length(interaction) # number of covariates with interaction effects that we want to test
-  if(class(interaction)=="character") {
+  if(inherits(interaction,"character")) {
     if (is.null(interaction.covariates)) {
       if (!all(interaction %in% colnames(null.obj$X))) {stop("there are interactions not in column name of covariate matrix.")}
       E <- as.matrix(null.obj$X[,interaction])
@@ -59,7 +59,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     } else match.id <- match(sample.id, null.obj$id_include)
     E <- as.matrix(E[match.id, , drop = FALSE])
     E <- scale(E, scale = FALSE)
-    if(class(null.obj) == "glmmkin.multi") {
+    if(inherits(null.obj, "glmmkin.multi")) {
       residuals <- residuals[match.id, , drop = FALSE]
       match.id <- rep(match.id, n.pheno) + rep((0:(n.pheno-1))*n, each = length(match.id))
     } else {
@@ -87,7 +87,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     variant.id <- paste(chr, pos, ref, alt, sep = ":")
     rm(chr, pos, ref, alt); gc()
     group.info <- try(read.table(group.file, header = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
-    if (class(group.info) == "try-error") {
+    if (inherits(group.info, "try-error")) {
       stop("Error: cannot read group.file!")
     }
     variant.id1 <- paste(group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")
@@ -154,7 +154,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         if(JF) JF.pval <- rep(NA, n.groups)
         if(JD) JD.pval <- rep(NA, n.groups)
         if(!is.null(meta.file.prefix)) {
-          if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
+          if(inherits(null.obj, "glmmkin.multi")) stop("Error: meta-analysis not supported yet for multiple phenotypes.")
           if(!is.null(interaction.covariates)) stop("Error: meta-analysis not supported yet for interaction.covariates.")
           if(.Platform$endian!="little") stop("Error: platform must be little endian.")
           meta.file.score <- paste0(meta.file.prefix, ".score.", b)
@@ -204,7 +204,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
             geno <- cbind(geno, do.call(cbind, sapply(1:qi, function(xx) geno*E[,xx], simplify = FALSE), envir = environment()))
           }
           U <- as.vector(crossprod(geno, residuals))
-          if(class(null.obj) == "glmmkin.multi") {
+          if(inherits(null.obj, "glmmkin.multi")) {
             geno <- Diagonal(n = n.pheno) %x% geno
             if (IV | IF | JV | JF | JD) K <- Diagonal(n = n.pheno) %x% K
           }
@@ -363,7 +363,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       if(JF) JF.pval <- rep(NA, n.groups)
       if(JD) JD.pval <- rep(NA, n.groups)
       if(!is.null(meta.file.prefix)) {
-        if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
+        if(inherits(null.obj, "glmmkin.multi")) stop("Error: meta-analysis not supported yet for multiple phenotypes.")
         if(!is.null(interaction.covariates)) stop("Error: meta-analysis not supported yet for interaction.covariates.")
         if(.Platform$endian!="little") stop("Error: platform must be little endian.")
         meta.file.score <- paste0(meta.file.prefix, ".score.1")
@@ -413,7 +413,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           geno <- cbind(geno, do.call(cbind, sapply(1:qi, function(xx) geno*E[,xx], simplify = FALSE), envir = environment()))
         }
         U <- as.vector(crossprod(geno, residuals))
-        if(class(null.obj) == "glmmkin.multi") {
+        if(inherits(null.obj, "glmmkin.multi")) {
           geno <- Diagonal(n = n.pheno) %x% geno
           if (IV | IF | JV | JF | JD) K <- Diagonal(n = n.pheno) %x% K
         }
@@ -571,7 +571,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     } else match.id <- match(sample.id, null.obj$id_include)
     E <- as.matrix(E[match.id, , drop = FALSE])
     E <- scale(E, scale = FALSE)
-    if(class(null.obj) == "glmmkin.multi") {
+    if(inherits(null.obj, "glmmkin.multi")) {
       residuals <- residuals[match.id, , drop = FALSE]
       match.id <- rep(match.id, n.pheno) + rep((0:(n.pheno-1))*n, each = length(match.id))
     } else {
@@ -658,7 +658,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         if(JF) JF.pval <- rep(NA, n.groups)
         if(JD) JD.pval <- rep(NA, n.groups)
         if(!is.null(meta.file.prefix)) {
-          if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
+          if(inherits(null.obj, "glmmkin.multi")) stop("Error: meta-analysis not supported yet for multiple phenotypes.")
           if(!is.null(interaction.covariates)) stop("Error: meta-analysis not supported yet for interaction.covariates.")
           if(.Platform$endian!="little") stop("Error: platform must be little endian.")
           meta.file.score <- paste0(meta.file.prefix, ".score.", b)
@@ -711,7 +711,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
             geno <- cbind(geno, do.call(cbind, sapply(1:qi, function(xx) geno*E[,xx], simplify = FALSE), envir = environment()))
           }
           U <- as.vector(crossprod(geno, residuals))
-          if(class(null.obj) == "glmmkin.multi") {
+          if(inherits(null.obj, "glmmkin.multi")) {
             geno <- Diagonal(n = n.pheno) %x% geno
             if (IV | IF | JV | JF | JD) K <- Diagonal(n = n.pheno) %x% K
           }
@@ -861,7 +861,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       if(JF) JF.pval <- rep(NA, n.groups)
       if(JD) JD.pval <- rep(NA, n.groups)
       if(!is.null(meta.file.prefix)) {
-        if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
+        if(inherits(null.obj, "glmmkin.multi")) stop("Error: meta-analysis not supported yet for multiple phenotypes.")
         if(!is.null(interaction.covariates)) stop("Error: meta-analysis not supported yet for interaction.covariates.")
         if(.Platform$endian!="little") stop("Error: platform must be little endian.")
         meta.file.score <- paste0(meta.file.prefix, ".score.1")
@@ -914,7 +914,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           geno <- cbind(geno, do.call(cbind, sapply(1:qi, function(xx) geno*E[,xx], simplify = FALSE), envir = environment()))
         }
         U <- as.vector(crossprod(geno, residuals))
-        if(class(null.obj) == "glmmkin.multi") {
+        if(inherits(null.obj, "glmmkin.multi")) {
           geno <- Diagonal(n = n.pheno) %x% geno
           if (IV | IF | JV | JF | JD) K <- Diagonal(n = n.pheno) %x% K
         }
@@ -1057,12 +1057,12 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
   }
   if(method == "kuonen") {
     pval <- try(.pKuonen(x = Q, lambda = lambda))
-    if(class(pval) == "try-error" || is.na(pval)) method <- "liu"
+    if(inherits(pval, "try-error") || is.na(pval)) method <- "liu"
     else return(pval)
   }
   if(method == "liu") {
     pval <- try(CompQuadForm::liu(q = Q, lambda = lambda))
-    if(class(pval) == "try-error") cat("Warning: method \"liu\" failed...\nQ:", Q, "\nlambda:", lambda, "\n")
+    if(inherits(pval, "try-error")) cat("Warning: method \"liu\" failed...\nQ:", Q, "\nlambda:", lambda, "\n")
     else return(pval)
   }
   return(NA)
@@ -1144,7 +1144,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   
   qi <- length(interaction.covariates) # number of covariates with interaction effects but we don't test
   ei <- length(interaction) # number of covariates with interaction effects that we want to test
-  if(class(interaction)=="character") {
+  if(inherits(interaction,"character")) {
     if (is.null(interaction.covariates)) {
       if (!all(interaction %in% colnames(null.obj$X))) {stop("there are interactions not in column name of covariate matrix.")}
       E <- as.matrix(null.obj$X[,interaction])
@@ -1186,7 +1186,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   }
   E <- as.matrix(E[match.id, , drop = FALSE])
   E <- scale(E, scale = FALSE)
-  if(class(null.obj) == "glmmkin.multi") {
+  if(inherits(null.obj, "glmmkin.multi")) {
     residuals <- residuals[match.id, , drop = FALSE]
     match.id <- rep(match.id, n.pheno) + rep((0:(n.pheno-1))*n, each = length(match.id))
   } else {
@@ -1218,7 +1218,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   variant.id <- paste(chr, pos, ref, alt, sep = ":")
   rm(chr, pos, ref, alt); gc()
   group.info <- try(read.table(group.file, header = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
-  if (class(group.info) == "try-error") {
+  if (inherits(group.info, "try-error")) {
     stop("Error: cannot read group.file!")
   }
   variant.id1 <- paste(group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")
@@ -1290,7 +1290,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
   n.pheno <- null.obj$n.pheno
   n.E <- as.numeric(dim(E)[2])
   missing.method <- try(match.arg(missing.method, c("impute2mean", "impute2zero")))
-  if(class(missing.method) == "try-error") stop("Error: \"missing.method\" must be \"impute2mean\" or \"impute2zero\".")
+  if(inherits(missing.method, "try-error")) stop("Error: \"missing.method\" must be \"impute2mean\" or \"impute2zero\".")
   if(any(!tests %in% c("MV", "MF", "IV", "IF", "JV", "JF", "JD"))) stop("Error: \"tests\" should only include \"MV\" for the main effect variance component test, \"MF\" for the main effect combined test of the burden and variance component tests using Fisher\'s method, \"IV\" for the interaction variance component test, \"IF\" for the interaction combined test of the burden and variance component tests using Fisher\'s method, \"JV\" for the joint variance component test for main effect and interaction, \"JF\" for the joint combined test of the burden and variance component tests for main effect and interaction using Fisher\'s method, or \"JD\" for the joint combined test of the burden and variance component tests for main effect and interaction using double Fisher\'s method.")
   MV <- "MV" %in% tests
   MF <- "MF" %in% tests
@@ -1333,7 +1333,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
       if(JF) JF.pval <- rep(NA, n.groups)
       if(JD) JD.pval <- rep(NA, n.groups)
       if(!is.null(meta.file.prefix)) {
-        if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
+        if(inherits(null.obj, "glmmkin.multi")) stop("Error: meta-analysis not supported yet for multiple phenotypes.")
         if(.Platform$endian!="little") stop("Error: platform must be little endian.")
         meta.file.score <- paste0(meta.file.prefix, ".score.", b)
         meta.file.cov <- paste0(meta.file.prefix, ".cov.", b)
@@ -1382,7 +1382,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
           geno <- cbind(geno, do.call(cbind, sapply(1:qi, function(xx) geno*E[,xx], simplify = FALSE), envir = environment()))
         }
         U <- as.vector(crossprod(geno, residuals))
-        if(class(null.obj) == "glmmkin.multi") {
+        if(inherits(null.obj, "glmmkin.multi")) {
           geno <- Diagonal(n = n.pheno) %x% geno
           if (IV | IF | JV | JF | JD) K <- Diagonal(n = n.pheno) %x% K
         }
@@ -1536,7 +1536,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
     if(JF) JF.pval <- rep(NA, n.groups)
     if(JD) JD.pval <- rep(NA, n.groups)
     if(!is.null(meta.file.prefix)) {
-      if(class(null.obj) == "glmmkin.multi") stop("Error: meta-analysis not supported yet for multiple phenotypes.")
+      if(inherits(null.obj, "glmmkin.multi")) stop("Error: meta-analysis not supported yet for multiple phenotypes.")
       if(.Platform$endian!="little") stop("Error: platform must be little endian.")
       meta.file.score <- paste0(meta.file.prefix, ".score.1")
       meta.file.cov <- paste0(meta.file.prefix, ".cov.1")
@@ -1585,7 +1585,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
         geno <- cbind(geno, do.call(cbind, sapply(1:qi, function(xx) geno*E[,xx], simplify = FALSE), envir = environment()))
       }
       U <- as.vector(crossprod(geno, residuals))
-      if(class(null.obj) == "glmmkin.multi") {
+      if(inherits(null.obj, "glmmkin.multi")) {
         geno <- Diagonal(n = n.pheno) %x% geno
         if (IV | IF | JV | JF | JD) K <- Diagonal(n = n.pheno) %x% K
       }
