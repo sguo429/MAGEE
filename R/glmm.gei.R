@@ -130,10 +130,10 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
       }
       
       if (is.null(strata.list)){
-        write.table(t(data.frame(n = c("SNPID","CHR","POS","Non_Effect_Allele","Effect_Allele", "N_Sample", "AF", "Beta_Marginal", "SE_Beta_Marginal", meta.header, "P_Value_Marginal",  "P_Value_Interaction", "P_Value_Joint"))), outfile, quote = F, col.names = F, row.names = F, sep="\t")
+        write.table(t(data.frame(n = c("SNPID","CHR","POS","Non_Effect_Allele","Effect_Allele", "N_Samples", "AF", "Beta_Marginal", "SE_Beta_Marginal", meta.header, "P_Value_Marginal",  "P_Value_Interaction", "P_Value_Joint"))), outfile, quote = F, col.names = F, row.names = F, sep="\t")
         
       }else {
-        write.table(t(data.frame(n = c("SNPID","CHR","POS","Non_Effect_Allele","Effect_Allele", "N_Sample", "AF", bin_header, "Beta_Marginal", "SE_Beta_Marginal", meta.header, "P_Value_Marginal",  "P_Value_Interaction", "P_Value_Joint"))), outfile, quote = F, col.names = F, row.names = F, sep="\t")
+        write.table(t(data.frame(n = c("SNPID","CHR","POS","Non_Effect_Allele","Effect_Allele", "N_Samples", "AF", bin_header, "Beta_Marginal", "SE_Beta_Marginal", meta.header, "P_Value_Marginal",  "P_Value_Interaction", "P_Value_Joint"))), outfile, quote = F, col.names = F, row.names = F, sep="\t")
       }
       
       foreach(b=1:ncores, .inorder=FALSE, .options.multicore = list(preschedule = FALSE, set.seed = FALSE)) %dopar% {
@@ -408,10 +408,10 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
         } else {totalCol = 7+ ei + ei+ +2*length(unique(strata))+ ei * (ei - 1) / 2} 
       }
       if (is.null(strata.list)){
-        write.table(t(data.frame(n = c("SNPID","CHR","POS","Non_Effect_Allele","Effect_Allele", "N_Sample", "AF", "Beta_Marginal", "SE_Beta_Marginal", meta.header, "P_Value_Marginal",  "P_Value_Interaction", "P_Value_Joint"))), outfile, quote = F, col.names = F, row.names = F, sep="\t")
+        write.table(t(data.frame(n = c("SNPID","CHR","POS","Non_Effect_Allele","Effect_Allele", "N_Samples", "AF", "Beta_Marginal", "SE_Beta_Marginal", meta.header, "P_Value_Marginal",  "P_Value_Interaction", "P_Value_Joint"))), outfile, quote = F, col.names = F, row.names = F, sep="\t")
         
       } else {
-         write.table(t(data.frame(n = c("SNPID","CHR","POS","Non_Effect_Allele","Effect_Allele", "N_Sample", "AF", bin_header, "Beta_Marginal", "SE_Beta_Marginal", meta.header, "P_Value_Marginal",  "P_Value_Interaction", "P_Value_Joint"))), outfile, quote = F, col.names = F, row.names = F, sep="\t")
+         write.table(t(data.frame(n = c("SNPID","CHR","POS","Non_Effect_Allele","Effect_Allele", "N_Samples", "AF", bin_header, "Beta_Marginal", "SE_Beta_Marginal", meta.header, "P_Value_Marginal",  "P_Value_Interaction", "P_Value_Joint"))), outfile, quote = F, col.names = F, row.names = F, sep="\t")
       }
       
       debug_file <- paste0(outfile, ".err")
@@ -752,7 +752,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
         interaction2 <- c("G", paste0("G-", interaction))
         cov.header = matrix(paste(rep(paste0("Cov_Beta_", interaction2), each = ncolE), interaction2, sep = "_"), ncolE, ncolE)
         ss.header = c(paste0("Beta_", interaction2), paste0("SE_Beta_", interaction2), cov.header[lower.tri(cov.header)])
-        writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Sample\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+        writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
         
          } else {
         interaction2 <- paste0("G-", interaction[1:ei])
@@ -762,7 +762,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
         } else {
           ss.header = c(paste0("Beta_", interaction2), paste0("SE_Beta_", interaction2))
         }
-        writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Sample\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+        writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
         
         }
     
@@ -788,7 +788,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           interaction2 <- c("G", paste0("G-", interaction))
           cov.header = matrix(paste(rep(paste0("Cov_Beta_", interaction2), each = ncolE), interaction2, sep = "_"), ncolE, ncolE)
           ss.header = c(paste0("Beta_", interaction2), paste0("SE_Beta_", interaction2), cov.header[lower.tri(cov.header)])
-          writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Sample\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+          writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
 
           } else {
           interaction2 <- paste0("G-", interaction[1:ei])
@@ -798,7 +798,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           } else {
             ss.header = c(paste0("Beta_", interaction2), paste0("SE_Beta_", interaction2))
           }
-         writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Sample\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+         writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
           
         }
       inTmp <- readLines(paste0(outfile, "_tmp"))
