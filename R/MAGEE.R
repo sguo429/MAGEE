@@ -219,7 +219,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           if(!is.null(interaction.covariates) && (JV | JF | JD)) {
             c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
             CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-            if(inherits(CPC_i, "try-error")) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+            if(inherits(CPC_i, "try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
 	    if(inherits(CPC_i, "try-error")) next
             U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
             V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
@@ -232,7 +232,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
               KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
             }
             V_i <- try(solve(V), silent = TRUE)
-            if(inherits(V_i, "try-error")) V_i <- try(MASS::ginv(V), silent = TRUE)
+            if(inherits(V_i, "try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
 	    if(inherits(V_i, "try-error")) next
             KPG <- crossprod(K,PG)
             IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
@@ -428,7 +428,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         if(!is.null(interaction.covariates) && (JV | JF | JD)) {
           c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
           CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-          if(inherits(CPC_i, "try-error")) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+          if(inherits(CPC_i, "try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
 	  if(inherits(CPC_i, "try-error")) next
           U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
           V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
@@ -441,7 +441,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
             KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
           }
           V_i <- try(solve(V), silent = TRUE)
-          if(inherits(V_i, "try-error")) V_i <- try(MASS::ginv(V), silent = TRUE)
+          if(inherits(V_i, "try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
 	  if(inherits(V_i, "try-error")) next
           KPG <- crossprod(K,PG)
           IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
@@ -726,7 +726,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           if(!is.null(interaction.covariates) && (JV | JF | JD)) {
             c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
             CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-            if(inherits(CPC_i, "try-error")) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+            if(inherits(CPC_i, "try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
             if(inherits(CPC_i, "try-error")) next
             U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
             V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
@@ -739,7 +739,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
               KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
             }
             V_i <- try(solve(V), silent = TRUE)
-            if(inherits(V_i, "try-error")) V_i <- try(MASS::ginv(V), silent = TRUE)
+            if(inherits(V_i, "try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
             if(inherits(V_i, "try-error")) next
             KPG <- crossprod(K,PG)
             IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
@@ -929,7 +929,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         if(!is.null(interaction.covariates) && (JV | JF | JD)) {
           c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
           CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-          if(inherits(CPC_i, "try-error")) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+          if(inherits(CPC_i, "try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
           if(inherits(CPC_i, "try-error")) next
           U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
           V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
@@ -942,7 +942,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
             KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
           }
           V_i <- try(solve(V), silent = TRUE)
-          if(inherits(V_i,"try-error")) V_i <- try(MASS::ginv(V), silent = TRUE)
+          if(inherits(V_i,"try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
           if(inherits(V_i, "try-error")) next
           KPG <- crossprod(K,PG)
           IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
@@ -1397,7 +1397,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
         if((qi != 0) && (JV | JF | JD)) {
           c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
           CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-          if(inherits(CPC_i,"try-error")) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+          if(inherits(CPC_i,"try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
           if(inherits(CPC_i,"try-error")) next
           U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
           V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
@@ -1410,7 +1410,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
             KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
           }
           V_i <- try(solve(V), silent = TRUE)
-          if(inherits(V_i, "try-error")) V_i <- try(MASS::ginv(V), silent = TRUE)
+          if(inherits(V_i, "try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
           if(inherits(V_i, "try-error")) next
           KPG <- crossprod(K,PG)
           IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
@@ -1600,7 +1600,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
       if((qi != 0) && (JV | JF | JD)) {
         c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
         CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-        if(inherits(CPC_i, "try-error")) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+        if(inherits(CPC_i, "try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
         if(inherits(CPC_i, "try-error")) next
         U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
         V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
@@ -1613,7 +1613,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
           KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
         }
         V_i <- try(solve(V), silent = TRUE)
-        if(inherits(V_i, "try-error")) V_i <- try(MASS::ginv(V), silent = TRUE)
+        if(inherits(V_i, "try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
         if(inherits(V_i,"try-error")) next
         KPG <- crossprod(K,PG)
         IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
