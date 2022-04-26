@@ -187,9 +187,11 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
             N <- nrow(geno) - colSums(is.na(geno))
             if(!is.null(strata.list)) { # E is not continuous
               freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2)
+	      if(is.null(ncol(freq.tmp))) freq.tmp <- matrix(freq.tmp, nrow = 1, dimnames = list(NULL, names(freq.tmp)))
               n.tmp <- sapply(strata.list, function(x) colSums(!is.na(geno[x, , drop = FALSE])))
-              freq.tmp.rev<-freq.tmp[,order(ncol(freq.tmp):1)]
-              n.tmp.rev<-n.tmp[,order(ncol(n.tmp):1)]
+	      if(is.null(ncol(n.tmp))) n.tmp <- matrix(n.tmp, nrow = 1, dimnames = list(NULL, names(n.tmp)))
+              freq.tmp.rev<-freq.tmp[,order(ncol(freq.tmp):1),drop=FALSE]
+              n.tmp.rev<-n.tmp[,order(ncol(n.tmp):1),drop=FALSE]
               rows.freq_N<-nrow(freq.tmp)
               cols.freq_N<-ncol(freq.tmp)+ncol(n.tmp)
               freq_N<-matrix(NA,nrow =rows.freq_N,ncol=cols.freq_N)
@@ -458,9 +460,11 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           N <- nrow(geno) - colSums(is.na(geno))
           if(!is.null(strata.list)) { # E is not continuous
             freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2)
-            freq.tmp.rev<-freq.tmp[,order(ncol(freq.tmp):1)]
+	    if(is.null(ncol(freq.tmp))) freq.tmp <- matrix(freq.tmp, nrow = 1, dimnames = list(NULL, names(freq.tmp)))
             n.tmp <- sapply(strata.list, function(x) colSums(!is.na(geno[x, , drop = FALSE])))
-            n.tmp.rev<-n.tmp[,order(ncol(n.tmp):1)]
+	    if(is.null(ncol(n.tmp))) n.tmp <- matrix(n.tmp, nrow = 1, dimnames = list(NULL, names(n.tmp)))
+            freq.tmp.rev<-freq.tmp[,order(ncol(freq.tmp):1),drop=FALSE]
+            n.tmp.rev<-n.tmp[,order(ncol(n.tmp):1),drop=FALSE]
             #combine the freq.tmp and n.tmp by alterating columns
             rows.freq_N<-nrow(freq.tmp)
             cols.freq_N<-ncol(freq.tmp)+ncol(n.tmp)
@@ -824,9 +828,11 @@ fix.dgesdd <- function(gds, out, debug_file, null.obj, J, residuals, tmp2.varian
     N <- nrow(geno) - colSums(is.na(geno))
     if(!is.null(strata.list)) { # E is not continuous
       freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2)
-      freq.tmp.rev<-freq.tmp[,order(ncol(freq.tmp):1)]
+      if(is.null(ncol(freq.tmp))) freq.tmp <- matrix(freq.tmp, nrow = 1, dimnames = list(NULL, names(freq.tmp)))
       n.tmp <- sapply(strata.list, function(x) colSums(!is.na(geno[x, , drop = FALSE])))
-      n.tmp.rev<-n.tmp[,order(ncol(n.tmp):1)]
+      if(is.null(ncol(n.tmp))) n.tmp <- matrix(n.tmp, nrow = 1, dimnames = list(NULL, names(n.tmp)))
+      freq.tmp.rev<-freq.tmp[,order(ncol(freq.tmp):1),drop=FALSE]
+      n.tmp.rev<-n.tmp[,order(ncol(n.tmp):1),drop=FALSE]
       rows.freq_N<-nrow(freq.tmp)
       cols.freq_N<-ncol(freq.tmp)+ncol(n.tmp)
       freq_N<-matrix(NA,nrow =rows.freq_N,ncol=cols.freq_N)
