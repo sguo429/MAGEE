@@ -1,4 +1,4 @@
-context("rare variant set based GEI and Joint test meta-analysis")
+context("rare variant set based GEI and joint test meta-analysis")
 
 
 test_that("cross-sectional id le 400 binomial", {
