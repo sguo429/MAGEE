@@ -51,8 +51,7 @@ Xinyu Wang, Han Chen, Duy Pham
   infile4 <- system.file("extdata", "meta4.txt", package = "MAGEE")
   infile5 <- system.file("extdata", "meta5.txt", package = "MAGEE")
   outfile <- "glmm.gei.meta.testoutfile.txt"
-  glmm.gei.meta(files = c(infile1, infile2, infile3, infile4, infile5), 
-                outfile = outfile, interaction="sex")
+  glmm.gei.meta(files = c(infile1, infile2, infile3, infile4, infile5), outfile = outfile, interaction="sex")
   unlink(outfile)
 }
 \keyword{ generalized linear mixed model }
