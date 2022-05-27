@@ -98,20 +98,22 @@ Xinyu Wang, Han Chen, Duy Pham
 }
 \examples{
 \donttest{
-  gdsfile <- system.file("extdata", "geno.gds", package = "MAGEE")
-  group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
+library(GMMAT)
   data(example)
-  set.seed(123)
-  pheno <- example$pheno2
-  kins <- example$GRM
-  obj1 <- glmmkin(y.trend ~ sex + time, data = pheno, kins = kins, id = "id",random.slope = "time", family = gaussian(link = "identity"))
-  outfile1 <- tempfile()
-  out1 <- MAGEE(obj1, interaction="sex",geno.file=gdsfile,group.file=group.file, meta.file.prefix = outfile1, MAF.range = c(0, 0.5), miss.cutoff = 1, method = "davies", tests = c("JV","JF","JD"))
-  out1.meta <- MAGEE.meta(outfile1, group.file = group.file, tests = c("JV","JF","JD"))
+  attach(example)
+  model0 <- glmmkin(disease ~ age + sex, data = pheno, kins = GRM,
+  id = "id", family = binomial(link = "logit"))
+  geno.file <- system.file("extdata", "geno.gds", package = "MAGEE")
+  group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
+  out <- MAGEE(model0, interaction="sex",geno.file=gdsfile,group.file=group.file, meta.file.prefix = "MAGEE.meta", MAF.range = c(0, 0.5), miss.cutoff = 1, method = "davies", tests = c("JV","JF","JD"))
+  print(out)
+  out1 <- MAGEE.meta("MAGEE.meta", group.file = group.file, tests = c("JV","JF","JD"))
+  print(out1)
+  unlink(paste0("MAGEE.meta.", c("score", "cov"), ".1"))
 }
 }
 \keyword{ variant set-based test }
 \keyword{ generalized linear mixed model }
 \keyword{ gene-environment interaction }
 \keyword{ joint test }
-\keyword{ Meta-analysis }
+\keyword{ meta-analysis }
