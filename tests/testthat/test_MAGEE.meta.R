@@ -20,6 +20,7 @@ test_that("cross-sectional id le 400 binomial", {
   out1 <- MAGEE(obj1, interaction="sex",geno.file=gdsfile,group.file=group.file,meta.file.prefix = outfile1, tests=c("JV","JF","JD"))
   out1.meta<-MAGEE.meta(meta.files.prefix = outfile1,  group.file=group.file, tests = c("JV","JF","JD"))
   expect_equal(signif(out1[, -(1:10)]), signif(out1.meta[, -(1:2)]))
+  unlink(c(paste0(outfile1, ".score.*"), paste0(outfile1, ".cov.*")))
   
   skip_on_cran()
   
@@ -30,13 +31,14 @@ test_that("cross-sectional id le 400 binomial", {
   expect_equal(signif(out1.tmp[, -(1:10)]), signif(out1.meta.tmp[, -(1:2)]))
   expect_equal(out1, out1.tmp)
   expect_equal(out1.meta, out1.meta.tmp)
+  unlink(c(paste0(outfile1.tmp, ".score.*"), paste0(outfile1.tmp, ".cov.*")))
   
   obj2 <- glmmkin(disease ~ age + sex, data = pheno, kins = NULL, id = "id", family = binomial(link = "logit"), method = "REML", method.optim = "AI")
   outfile2 <- tempfile()
   out2 <- MAGEE(obj2, interaction="sex",geno.file=gdsfile,group.file=group.file, meta.file.prefix = outfile2, MAF.range = c(0, 0.5), miss.cutoff = 1, method = "davies", tests = c("JV","JF","JD"))
   out2.meta <- MAGEE.meta(outfile2, group.file = group.file, MAF.range = c(0, 0.5), miss.cutoff = 1, method = "davies", tests = c("JV","JF","JD"))
   expect_equal(signif(out2[, -(1:10)],5), signif(out2.meta[, -(1:2)],5))
-  unlink(c(out1,out1.meta,out2,out2.meta))
+  unlink(c(paste0(outfile2, ".score.*"), paste0(outfile2, ".cov.*")))
 })
 
 test_that("cross-sectional id gt 400 binomial", {
@@ -66,7 +68,7 @@ test_that("cross-sectional id gt 400 binomial", {
   out2 <- MAGEE(obj2, interaction="sex",geno.file=gdsfile,group.file=group.file, meta.file.prefix = outfile2, MAF.range = c(0, 0.5), miss.cutoff = 1, method = "davies", tests = c("JV","JF","JD"))
   out2.meta <- MAGEE.meta(outfile2, group.file = group.file, tests = c("JV","JF","JD"))
   expect_equal(signif(out2[, -(1:10)], 5), signif(out2.meta[, -(1:2)], 5))
-  unlink(c(out1,out1.meta,out2,out2.meta))
+  unlink(c(paste0(outfile1, ".score.*"), paste0(outfile1, ".cov.*"), paste0(outfile2, ".score.*"), paste0(outfile2, ".cov.*")))
 })
 
 test_that("cross-sectional id le 400 gaussian", {
@@ -94,7 +96,7 @@ test_that("cross-sectional id le 400 gaussian", {
   out2 <- MAGEE(obj2,interaction="sex",geno.file=gdsfile,group.file=group.file, meta.file.prefix = outfile2, MAF.range = c(0, 0.5), miss.cutoff = 1, method = "davies", tests = c("JV","JF","JD"))
   out2.meta <- MAGEE.meta(outfile2, group.file = group.file, tests = c("JV","JF","JD"))
   expect_equal(signif(out2[, -(1:10)], 5), signif(out2.meta[, -(1:2)], 5))
-  unlink(c(out1,out1.meta,out2,out2.meta))
+  unlink(c(paste0(outfile1, ".score.*"), paste0(outfile1, ".cov.*"), paste0(outfile2, ".score.*"), paste0(outfile2, ".cov.*")))
 })
 
 test_that("cross-sectional id gt 400 gaussian", {
@@ -123,7 +125,7 @@ test_that("cross-sectional id gt 400 gaussian", {
   out2 <- MAGEE(obj2, interaction="sex",geno.file=gdsfile,group.file=group.file, meta.file.prefix = outfile2, MAF.range = c(0, 0.5), miss.cutoff = 1, method = "davies", tests = c("JV","JF","JD"))
   out2.meta <- MAGEE.meta(outfile2, group.file = group.file, tests = c("JV","JF","JD"))
   expect_equal(signif(out2[, -(1:10)],4), signif(out2.meta[, -(1:2)],4))
-  unlink(c(out1,out1.meta,out2,out2.meta))
+  unlink(c(paste0(outfile1, ".score.*"), paste0(outfile1, ".cov.*"), paste0(outfile2, ".score.*"), paste0(outfile2, ".cov.*")))
 })
 
 test_that("longitudinal repeated measures gaussian", {
@@ -145,7 +147,7 @@ test_that("longitudinal repeated measures gaussian", {
   out2 <- MAGEE(obj2, interaction="sex",geno.file=gdsfile,group.file=group.file, meta.file.prefix = outfile2, MAF.range = c(0, 0.5), miss.cutoff = 1, method = "davies", tests = c("JV","JF","JD"))
   out2.meta <- MAGEE.meta(outfile2, group.file = group.file, tests = c("JV","JF","JD"))
   expect_equal(signif(out2[, -(1:10)]), signif(out2.meta[, -(1:2)]))
-  unlink(c(out1,out1.meta,out2,out2.meta))
+  unlink(c(paste0(outfile1, ".score.*"), paste0(outfile1, ".cov.*"), paste0(outfile2, ".score.*"), paste0(outfile2, ".cov.*")))
 })
 
 test_that("longitudinal random time trend gaussian", {
@@ -167,6 +169,5 @@ test_that("longitudinal random time trend gaussian", {
   out2 <- MAGEE(obj2, interaction="sex",geno.file=gdsfile,group.file=group.file,meta.file.prefix = outfile2, MAF.range = c(0, 0.5), miss.cutoff = 1, method = "davies", tests = c("JV","JF","JD"))
   out2.meta <- MAGEE.meta(outfile2, group.file = group.file, tests = c("JV","JF","JD"))
   expect_equal(signif(out2[, -(1:10)], 5), signif(out2.meta[, -(1:2)], 5))
-  unlink(c(out1,out1.meta,out2,out2.meta))
-  
+  unlink(c(paste0(outfile1, ".score.*"), paste0(outfile1, ".cov.*"), paste0(outfile2, ".score.*"), paste0(outfile2, ".cov.*")))
 })
