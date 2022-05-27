@@ -1,7 +1,6 @@
 \name{MAGEE.meta}
 \alias{MAGEE.meta}
 
-
 \title{
 Mixed model Association tests for GEne-Environment interactions Meta-analysis
 }
@@ -9,27 +8,11 @@ Mixed model Association tests for GEne-Environment interactions Meta-analysis
 Use a glmmkin class object from the null GLMM to perform meta-analysis of variant set-based main effect tests, gene-environment interaction tests, and joint tests for association with genotypes in a GDS file (.gds). 
 }
 \usage{
-MAGEE.meta (meta.files.prefix, n.files = rep(1, length(meta.files.prefix)), 
+MAGEE.meta(meta.files.prefix, n.files = rep(1, length(meta.files.prefix)), 
             cohort.group.idx = NULL, group.file, group.file.sep = "\t", 
             E.match=NULL, MAF.range = c(1e-7, 0.5), 
             MAF.weights.beta = c(1, 25), miss.cutoff = 1, method = "davies", 
             tests = "JF", use.minor.allele = FALSE)
-
-MAGEE(null.obj, interaction, geno.file, group.file,  group.file.sep = "\t", 
-      bgen.samplefile = NULL, interaction.covariates = NULL, meta.file.prefix = NULL,
-      MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, 
-      missing.method = "impute2mean", method = "davies", tests = "JF", 
-      use.minor.allele = FALSE, auto.flip = FALSE, 
-      Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1)
-
-MAGEE.prep(null.obj, interaction, geno.file, group.file, interaction.covariates = NULL,
-           group.file.sep = "\t", auto.flip = FALSE)
-           
-MAGEE.lowmem(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NULL, 
-             MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, 
-             missing.method = "impute2mean", method = "davies", tests = "JF", 
-             use.minor.allele = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE,
-	     ncores = 1)
 }
 
 \arguments{
@@ -72,7 +55,6 @@ a logical switch for whether to use the minor allele (instead of the alt allele)
   \item{verbose}{
 a logical switch for whether a progress bar should be shown (default = FALSE).
 } 
-
 }
 \value{
 a data frame with the following components:
