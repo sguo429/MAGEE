@@ -38,7 +38,7 @@ morekeywords={}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
-\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.2}
+\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.2.0}
 \date{May 26, 2022}
 \author{Xinyu Wang\\Human Genetics Center\\Dept. of Biostatistics and Data Science\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Xinyu.Wang@uth.tmc.edu\\\\Han Chen\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\Center for Precision Health\\School of Biomedical Informatics\\The University of Texas Health Science Center at Houston\\Email: Han.Chen.2@uth.tmc.edu\\\\Duy Pham\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: duy.t.pham@uth.tmc.edu\\\\Kenneth Westerman\\Department of Medicine\\Clinical and Translational Epidemiology Unit\\Mongan Institute\\Massachusetts General Hospital\\Email: KEWESTERMAN@mgh.harvard.edu\\\\Cong Pan\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: cong.pan@uth.tmc.edu} 
 
@@ -148,7 +148,7 @@ model0 <- glmmkin(disease ~ age + sex, data = pheno, kins = GRM,
 
 \subsection{Single variant tests}
 Here is a simple example of single variant score tests using \textbf{glmm.gei}:
-\subsubsection{Score tests}
+\subsubsection{Pooled analysis}
 <<MAGEEgeigds, eval=FALSE, echo=TRUE>>=
 infile <- system.file("extdata", "geno.gds", package = "MAGEE")
 gds_outfile <- tempfile()
@@ -181,27 +181,29 @@ glmm.gei.meta(files = c(infile1, infile2, infile3, infile4, infile5),
 In this example, the first argument in \textbf{glmm.gei.meta} is tab or space delimited plain text files (or compressed files that can be recognized by the R function read.table) with at least the following columns: SNPID, CHR, POS, Non_Effect_Allele, Effect_Allele, N_Samples, AF, Beta_Marginal, SE_Beta_Marginal, P_Value_Marginal, Beta_G, Beta_G_sex, SE_Beta_G, SE_Beta_G_sex, Cov_Beta_G_G.sex, P_Value_Interaction, P_Value_Joint. Generally, if each study performs score tests using genotypes in PLINK binary PED format or GDS format, the score test output from glmm.score can be directly used as input files. The argument "interaction" can be either a character vector indicating one or multiple environmental factors, or a numerical vector indicating the column numbers for the environmental factors in the covariate matrix. The argument "outfile" is the name of the output file. 
 
 
-\subsubsection{Variant set tests}
+\subsection{Variant set tests}
+\subsubsection{Pooled analysis}
 Variant set tests in a single study (or a pooled analysis of multiple studies) can be performed using the function \textbf{MAGEE}. In addition to an object returned from the function \textbf{glmmkin}, a group definition file with no header and 6 columns (variant set id, variant chromosome, variant position, variant reference allele, variant alternate allele, weight) is also required, as described in \textbf{section 4.3}. An example of running \textbf{MAGEE}:
 <<MAGEEmageegds, eval=FALSE, echo=TRUE>>=
 geno.file <- system.file("extdata", "geno.gds", package = "MAGEE")
 group.file <- system.file("extdata", "SetID.withweights.txt", 
                           package = "MAGEE")
-out <- MAGEE.meta(meta.files.prefix = outfile1,  
-                   group.file=group.file,
-                    tests=c("JV", "JF", "JD"))
+MAGEE(model0, interaction='sex', geno.file, group.file, 
+             group.file.sep = "\t", tests=c("JV", "JF", "JD"))
 @
-The first argument in \textbf{MAGEE.meta} is a vector of intermediate files' prefix with length
-equal to the number of studies. The argument "group.file" is the name of the group definition file. The users can choose one or more test types as "IV", "IF", "JV", "JF", and "JD" in the "tests" argument. 
+The first argument in \textbf{MAGEE} is the returned glmmkin class object from fitting the null model. The argument "interaction" can be either a character vector indicating one or multiple environmental factors, or a numerical vector indicating the column numbers for the environmental factors in the covariate matrix. The argument "geno.file" is the name (and path if not in the current working directory) of the genotype file, and the argument "group.file" is the name of the group definition file. The users can choose one or more test types as "IV", "IF", "JV", "JF", and "JD" in the "tests" argument. Note that the JV test also returns the \textit{P} value from MV and IV tests, and the JF and JD tests also return the \textit{P} value from MF and IF tests. Therefore, the above example gives the test results for all the seven tests.
 
 \subsubsection{Meta-analysis}
 <<MAGEEmageegds, eval=FALSE, echo=TRUE>>=
 geno.file <- system.file("extdata", "geno.gds", package = "MAGEE")
 group.file <- system.file("extdata", "SetID.withweights.txt", 
                           package = "MAGEE")
-out <- MAGEE(model0, interaction='sex', geno.file, group.file, 
-             group.file.sep = "\t", tests=c("JV", "JF", "JD"))
+MAGEE.meta(meta.files.prefix = "MAGEE.meta",  
+                   group.file=group.file,
+                    tests=c("JV", "JF", "JD"))
 @
+The first argument in \textbf{MAGEE.meta} is a vector of intermediate files' prefix with length equal to the number of studies. The argument "group.file" is the name of the group definition file. The users can choose one or more test types as "IV", "IF", "JV", "JF", and "JD" in the "tests" argument. 
+
 
 \section{Output}
 \subsection{Single variant tests}
@@ -261,7 +263,7 @@ The first 6 columns are copied from the BGEN file: the SNP, RSID, chromosome CHR
 
 For both GDS and BGEN file formats, if the argument meta.output = TRUE, \textbf{glmm.gei} will output additional columns containing the coefficients and variance-covariance of the interaction terms.
 
-\subsection{Variant set-based tests}
+\subsection{Variant set tests}
 The \textbf{MAGEE} function returns a data.frame object for both GDS and BGEN genotype file inputs. Below are examples for the first 5 rows of the example output: 
 \begin{verbatim}
 group    n.variants   miss.min   miss.mean   miss.max
@@ -389,9 +391,9 @@ Initial public release of \textit{MAGEE}.
 \item Fixed bugs on inverse of singular matrix \textbf{glmm.gei}.
 \end{enumerate}
 
-\subsection{Version 1.2 (May 26, 2022)}
+\subsection{Version 1.2.0 (May 26, 2022)}
 \begin{enumerate}
-\item Added Meta-analysis \textbf{glmm.gei}.
+\item Added meta-analysis functions \textbf{glmm.gei.meta} and \textbf{MAGEE.meta}.
 \end{enumerate}
 
 \section{Contact}
