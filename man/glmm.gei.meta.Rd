@@ -1,10 +1,10 @@
 \name{glmm.gei.meta}
 \alias{glmm.gei.meta}
 \title{
-GLMM based Meta-analysis of single variant tests for gene-environment interactions
+GLMM based meta-analysis of single variant tests for gene-environment interactions
 }
 \description{
-Use a glmmkin class object from the null GLMM to perform Meta-analysis of single variant main effect score test, gene-environment interaction test, or joint test for association with genotypes in a GDS file .gds.
+Use a glmmkin class object from the null GLMM to perform meta-analysis of single variant main effect score test, gene-environment interaction test, or joint test for association with genotypes in a GDS file .gds.
 }
 \usage{
 glmm.gei.meta(files, outfile, interaction, SNPID = rep("SNPID", length(files)), 
@@ -19,7 +19,6 @@ tab or space delimited plain text files (or compressed files that can be recogni
   \item{outfile}{
 the output file name.
 }
-
   \item{interaction}{
 a numeric or a character vector indicating the environmental factors. If a numeric vector, it represents which indices in the order of covariates are the environmental factors; if a character vector, it represents the variable names of the environmental factors.
 }
@@ -37,6 +36,7 @@ a character vector of Non_Effect_Allele column names in each input file. The len
 }
   \item{Effect_Allele}{
 a character vector of Effect_Allele column names in each input file. The length and order must match the length and order of \code{files} (default = rep("Effect_Allele", length(files))).
+}
 }
 \references{
 Chen, H., Wang, C., Conomos, M.P., Stilp, A.M., Li, Z., Sofer, T., Szpiro, A.A., Chen, W., Brehm, J.M., Celedón, J.C., Redline, S., Papanicolaou, G.J., Thornton, T.A., Laurie, C.C., Rice, K. and Lin, X. (2016) Control forpopulation structure and relatedness for binary traits in genetic association studies via logistic mixed models. The American Journal of Human Genetics 98, 653-666.
@@ -58,3 +58,4 @@ Xinyu Wang, Han Chen, Duy Pham
 \keyword{ generalized linear mixed model }
 \keyword{ gene-environment interaction }
 \keyword{ joint test }
+\keyword{ meta-analysis }

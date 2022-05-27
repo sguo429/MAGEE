@@ -55,30 +55,54 @@
 ### code chunk number 7: MAGEEgeibgen (eval = FALSE)
 ###################################################
 ## infile <- system.file("extdata", "geno.bgen", package = "MAGEE")
-## bgen_outfile <- tempfile()
-## samplefile <- system.file("extdata", "geno.sample", package = "MAGEE")
+## gds_outfile <- tempfile()
 ## glmm.gei(model0, interaction='sex', geno.file = infile, 
-##          outfile = bgen_outfile, bgen.samplefile = samplefile)
+##          outfile = gds_outfile)
 
 
 ###################################################
-### code chunk number 8: MAGEEmageegds (eval = FALSE)
+### code chunk number 8: MAGEEgeigds (eval = FALSE)
+###################################################
+## outfile <- tempfile()
+## infile1 <- system.file("extdata", "meta1.txt", package = "MAGEE")
+## infile2 <- system.file("extdata", "meta2.txt", package = "MAGEE")
+## infile3 <- system.file("extdata", "meta3.txt", package = "MAGEE")
+## infile4 <- system.file("extdata", "meta4.txt", package = "MAGEE")
+## infile5 <- system.file("extdata", "meta5.txt", package = "MAGEE")
+## outfile <- tempfile()
+## glmm.gei.meta(files = c(infile1, infile2, infile3, infile4, infile5),
+##                interaction="sex", outfile = outfile)
+
+
+###################################################
+### code chunk number 9: MAGEEmageegds (eval = FALSE)
 ###################################################
 ## geno.file <- system.file("extdata", "geno.gds", package = "MAGEE")
 ## group.file <- system.file("extdata", "SetID.withweights.txt", 
 ##                           package = "MAGEE")
-## out <- MAGEE(model0, interaction='sex', geno.file, group.file, 
+## MAGEE(model0, interaction='sex', geno.file, group.file, 
 ##              group.file.sep = "\t", tests=c("JV", "JF", "JD"))
 
 
 ###################################################
-### code chunk number 9: MKL (eval = FALSE)
+### code chunk number 10: MAGEEmageegds (eval = FALSE)
+###################################################
+## geno.file <- system.file("extdata", "geno.gds", package = "MAGEE")
+## group.file <- system.file("extdata", "SetID.withweights.txt", 
+##                           package = "MAGEE")
+## MAGEE.meta(meta.files.prefix = "MAGEE.meta",  
+##                    group.file=group.file,
+##                     tests=c("JV", "JF", "JD"))
+
+
+###################################################
+### code chunk number 11: MKL (eval = FALSE)
 ###################################################
 ## Sys.setenv(MKL_NUM_THREADS = 1)
 
 
 ###################################################
-### code chunk number 10: RhpcBLASctlL (eval = FALSE)
+### code chunk number 12: RhpcBLASctlL (eval = FALSE)
 ###################################################
 ## #install.packages("RhpcBLASctl")
 ## library(RhpcBLASctl)

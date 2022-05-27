@@ -2,7 +2,7 @@
 \alias{MAGEE.meta}
 
 \title{
-Mixed model Association tests for GEne-Environment interactions Meta-analysis
+Mixed model Association tests for GEne-Environment interactions meta-analysis
 }
 \description{
 Use a glmmkin class object from the null GLMM to perform meta-analysis of variant set-based main effect tests, gene-environment interaction tests, and joint tests for association with genotypes in a GDS file (.gds). 
@@ -31,6 +31,9 @@ a plain text file with 6 columns defining the test units. There should be no hea
   \item{group.file.sep}{
 the delimiter in group.file (default = "\\t").
 }
+  \item{E.match}{
+environmental factors that match the interactions (default = "\\t").
+}
   \item{MAF.range}{
 a numeric vector of length 2 defining the minimum and maximum minor allele frequencies of variants that should be included in the analysis (default = c(1e-7, 0.5)). Filter applied to the combined samples.
 }
@@ -46,52 +49,46 @@ a method to compute p-values for SKAT-type test statistics (default = "davies").
   \item{tests}{
 a character vector indicating which SMMAT tests should be performed ("B" for the burden test, "S" for SKAT, "O" for SKAT-O and "E" for the efficient hybrid test of the burden test and SKAT). The burden test and SKAT are automatically included when performing "O", and the burden test is automatically included when performing "E" (default = "E").
 }
-  \item{rho}{
-a numeric vector defining the search grid used in SMMAT-O for SKAT-O (see the SKAT-O paper for details). Not used for SMMAT-B for the burden test, SMMAT-S for SKAT or SMMAT-E for the efficient hybrid test of the burden test and SKAT (default = c(0, 0.1^2, 0.2^2, 0.3^2, 0.4^2, 0.5^2, 0.5, 1)).
-}
   \item{use.minor.allele}{
 a logical switch for whether to use the minor allele (instead of the alt allele) as the coding allele (default = FALSE). It does not change SMMAT-S results, but SMMAT-B (as well as SMMAT-O and SMMAT-E) will be affected. Along with the MAF filter, this option is useful for combining rare mutations, assuming rare allele effects are in the same direction. Use with caution, as major/minor alleles may flip in different cohorts. In that case, minor allele will be determined based on the allele frequency in the combined samples.
 }
-  \item{verbose}{
-a logical switch for whether a progress bar should be shown (default = FALSE).
-} 
+
 }
 \value{
-a data frame with the following components:
   \item{group}{
 name of the test unit group.
 }
   \item{n.variants}{
 number of variants in the test unit group that pass the missing rate and allele frequency filters.
 }
-  \item{B.score}{
-burden test score statistic.
+  \item{MV.pval}{
+MV test p-value.
 }
-  \item{B.var}{
-variance of burden test score statistic.
+  \item{MF.pval}{
+MF test p-value.
 }
-  \item{B.pval}{
-burden test p-value.
+  \item{IV.pval}{
+IV test p-value.
 }
-  \item{S.pval}{
-SKAT p-value.
+  \item{IF.pval}{
+IF test p-value.
 }
-  \item{O.pval}{
-SKAT-O p-value.
+  \item{JV.pval}{
+JV test p-value.
 }
-  \item{O.minp}{
-minimum p-value in the SKAT-O search grid.
+  \item{JF.pval}{
+JF test p-value.
 }
-  \item{O.minp.rho}{
-rho value at the minimum p-value in the SKAT-O search grid.
+  \item{JD.pval}{
+JD test p-value.
 }
-  \item{E.pval}{
-SMMAT efficient hybrid test of the burden test and SKAT p-value.
-}
+
+  
 }
 \references{
 Wang, X., Lim, E., Liu, C, Sung, Y.J., Rao, D.C., Morrison, A.C., Boerwinkle, E., Manning, A. K., and Chen, H. (2020) Efficient gene-environment interaction tests for large biobank-scale sequencing studies. Genetic Epidemiology, 44(8): 908-923.
 Chen, H., Huffman, J.E., Brody, J.A., Wang, C., Lee, S., Li, Z., Gogarten, S.M., Sofer, T., Bielak, L.F., Bis, J.C., et al. (2019) Efficient variant set mixed model association tests for continuous and binary traits in large-scale whole-genome sequencing studies. The American Journal of Human Genetics, 104 (2): 260-274.
+Wang, X., Pham, D.T., Westerman, K.E., Pan, C., Manning, A.K., Chen, H., (2022) Genomic summary statistics and meta-analysis for set-based gene-environment interaction tests in large-scale sequencing studies. medrxiv.  
 }
 \author{
 Xinyu Wang, Han Chen, Duy Pham
