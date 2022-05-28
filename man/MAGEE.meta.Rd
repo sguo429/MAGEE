@@ -47,10 +47,10 @@ the maximum missing rate allowed for a variant to be included (default = 1, incl
 a method to compute p-values for SKAT-type test statistics (default = "davies"). "davies" represents an exact method that computes a p-value by inverting the characteristic function of the mixture chisq distribution, with an accuracy of 1e-6. When "davies" p-value is less than 1e-5, it defaults to method "kuonen". "kuonen" represents a saddlepoint approximation method that computes the tail probabilities of the mixture chisq distribution. When "kuonen" fails to compute a p-value, it defaults to method "liu". "liu" is a moment-matching approximation method for the mixture chisq distribution.
 }
   \item{tests}{
-a character vector indicating which SMMAT tests should be performed ("B" for the burden test, "S" for SKAT, "O" for SKAT-O and "E" for the efficient hybrid test of the burden test and SKAT). The burden test and SKAT are automatically included when performing "O", and the burden test is automatically included when performing "E" (default = "E").
+a character vector indicating which MAGEE tests should be performed ("B" for the burden test, "S" for SKAT, "O" for SKAT-O and "E" for the efficient hybrid test of the burden test and SKAT). The burden test and SKAT are automatically included when performing "O", and the burden test is automatically included when performing "E" (default = "E").
 }
   \item{use.minor.allele}{
-a logical switch for whether to use the minor allele (instead of the alt allele) as the coding allele (default = FALSE). It does not change SMMAT-S results, but SMMAT-B (as well as SMMAT-O and SMMAT-E) will be affected. Along with the MAF filter, this option is useful for combining rare mutations, assuming rare allele effects are in the same direction. Use with caution, as major/minor alleles may flip in different cohorts. In that case, minor allele will be determined based on the allele frequency in the combined samples.
+a logical switch for whether to use the minor allele (instead of the alt allele) as the coding allele (default = FALSE). It does not change MAGEE-S results, but MAGEE-B (as well as MAGEE-O and MAGEE-E) will be affected. Along with the MAF filter, this option is useful for combining rare mutations, assuming rare allele effects are in the same direction. Use with caution, as major/minor alleles may flip in different cohorts. In that case, minor allele will be determined based on the allele frequency in the combined samples.
 }
 
 }
@@ -82,7 +82,16 @@ JF test p-value.
   \item{JD.pval}{
 JD test p-value.
 }
-
+\value{
+a data frame containing the following:
+  \item{SNP}{SNP name.}
+  \item{A1}{allele 1.}
+  \item{A2}{allele 2.}
+  \item{N}{total sample size.}
+  \item{AF}{effect allele frequency (user-defined: can be either allele 1 or allele 2).}
+  \item{G.SCORE}{the summary score of the effect allele.}
+  \item{K.SCORE.*}{the score of the environmental factor(s).}
+}
   
 }
 \references{

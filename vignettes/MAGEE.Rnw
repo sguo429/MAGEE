@@ -310,10 +310,36 @@ Beta_G-sex SE_Beta_G-sex P_Value_Marginal P_Value_Interaction P_Value_Joint
 0.347977   0.308173      0.624567         0.258831            0.468954
 -0.289946  0.303256      0.538287         0.339017            0.523911
 \end{verbatim}
-The first 6 columns are copied from the BGEN file: the SNP, RSID, chromosome CHR, physical position POS, and the first and second alleles A1 and A2. Results are included in 13 columns for the second allele in the BGEN file: the sample size N\textunderscore Sample (with non-missing genotypes), the allele frequency (AF), the number of non-missing samples (N\textunderscore sex\textunderscore 0, N\textunderscore sex\textunderscore 1) and allele frequency of the effect allele (AF\textunderscore sex\textunderscore 0, AF\textunderscore sex\textunderscore 1) for each combination of strata for all of the catgorical exposure or interaction covariate, the coefficient estimate for the marginal genetic effect (Beta\textunderscore Marginal), the SE of the marginal genetic effect (SE\textunderscore Beta\textunderscore Marginal), the coefficient estimate for the interaction term sex (Beta\textunderscore G-sex), the model-based SE associated with GxE term (SE\textunderscore Beta\textunderscore G-sex), the marginal effect score test \textit{P} value P\textunderscore Value\textunderscore Marginal, the gene-environment interaction test \textit{P} value P\textunderscore Value\textunderscore Interaction, and the joint test \textit{P} value P\textunderscore Value\textunderscore Joint.
+The first 6 columns are copied from the BGEN file: the SNP, RSID, chromosome CHR, physical position POS, and reference and alternate alleles ("allele"). Results are included in 13 columns for the second allele in the BGEN file: the sample size N\textunderscore Sample (with non-missing genotypes), the allele frequency (AF), the number of non-missing samples (N\textunderscore sex\textunderscore 0, N\textunderscore sex\textunderscore 1) and allele frequency of the effect allele (AF\textunderscore sex\textunderscore 0, AF\textunderscore sex\textunderscore 1) for each combination of strata for all of the catgorical exposure or interaction covariate, the coefficient estimate for the marginal genetic effect (Beta\textunderscore Marginal), the SE of the marginal genetic effect (SE\textunderscore Beta\textunderscore Marginal), the coefficient estimate for the interaction term sex (Beta\textunderscore G-sex), the model-based SE associated with GxE term (SE\textunderscore Beta\textunderscore G-sex), the marginal effect score test \textit{P} value P\textunderscore Value\textunderscore Marginal, the gene-environment interaction test \textit{P} value P\textunderscore Value\textunderscore Interaction, and the joint test \textit{P} value P\textunderscore Value\textunderscore Joint.
 
 
 For both GDS and BGEN file formats, if the argument meta.output = TRUE, \textbf{glmm.gei} will output additional columns containing the coefficients and variance-covariance of the interaction terms.
+
+The meta-analysis function \textbf{glmm.gei.meta} generates a tab-delimited plain text output file. Here are the header and the first 5 rows of the example output from the meta-analysis:
+\begin{verbatim}
+SNPID     CHR POS Non_Effect_Allele Effect_Allele N_Samples  AF
+1:6:T:G   1   6   T                 G             10000      0.6681618
+1:9:A:A   1   9   A                 A             10000      0.8820916
+1:4:A:A   1   4   A                 A             10000      0.8959009
+1:3:A:G   1   3   A                 G             20000      0.4858367
+1:7:T:G   1   7   T                 G             20000      0.3754258
+...
+Beta_Marginal SE_Beta_Marginal P_Value_Marginal  Beta_G      Beta_G_sex
+0.32866874    0.9899530        7.398859e-01      0.30315698  0.506471492
+0.43239601    0.1320372        1.057351e-03      1.04968727  1.153496562
+0.56527936    0.7841878        4.710037e-01      0.29184287  1.083371475
+0.05649831    0.5634919        9.201342e-01      0.48271148  -0.073251696
+0.14983613    0.3414406        6.607810e-01      -0.17989467 -0.230739884
+...
+SE_Beta_G SE_Beta_G_sex Cov_Beta_G_G_sex P_Value_Interaction P_Value_Joint
+0.1459865 0.9128646     0.2895442852     0.5790208           0.949407885
+0.1495806 0.7204614     0.2154526653     0.1093653           1.000000000
+1.1220222 1.2256722     0.1288226309     0.3767503           0.665978825
+0.4875232 0.9367640     0.1250295669     0.8823533           0.573433101
+0.5301991 0.8262347     0.0973737560     0.7874718           0.923653779
+...
+\end{verbatim}
+The first 3 columns are set by the function \textbf{glmm.gei.meta} to denote SNP name and alleles. The rest of the columns are: reference and alternate alleles ("allele"),  the sample size N\textunderscore Sample (with non-missing genotypes), the allele frequency (AF), the coefficient estimate for the marginal genetic effect (Beta\textunderscore Marginal), the SE of the marginal genetic effect (SE\textunderscore Beta\textunderscore Marginal), the coefficient estimate for the interaction term sex (Beta\textunderscore G-sex), the model-based SE associated with GxE term (SE\textunderscore Beta\textunderscore G-sex), the marginal effect score test \textit{P} value P\textunderscore Value\textunderscore Marginal, the gene-environment interaction test \textit{P} value P\textunderscore Value\textunderscore Interaction, and the joint test \textit{P} value P\textunderscore Value\textunderscore Joint.
 
 
 In variant set tests \textbf{MAGEE}, if "meta.file.prefix" is specified, space-delimited intermediate files for single variant scores and binary intermediate files for covariance matrices will be generated. Here are the header and the first 5 rows of the example intermediate file "MAGEE.meta.score.1":

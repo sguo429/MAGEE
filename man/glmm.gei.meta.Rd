@@ -40,6 +40,7 @@ a character vector of Effect_Allele column names in each input file. The length 
 }
 \references{
 Chen, H., Wang, C., Conomos, M.P., Stilp, A.M., Li, Z., Sofer, T., Szpiro, A.A., Chen, W., Brehm, J.M., Celedón, J.C., Redline, S., Papanicolaou, G.J., Thornton, T.A., Laurie, C.C., Rice, K. and Lin, X. (2016) Control forpopulation structure and relatedness for binary traits in genetic association studies via logistic mixed models. The American Journal of Human Genetics 98, 653-666.
+Wang, X., Pham, D.T., Westerman, K.E., Pan, C., Manning, A.K., Chen, H., (2022) Genomic summary statistics and meta-analysis for set-based gene-environment interaction tests in large-scale sequencing studies. medrxiv. 
 }
 \author{
 Xinyu Wang, Han Chen, Duy Pham
@@ -51,7 +52,7 @@ Xinyu Wang, Han Chen, Duy Pham
   infile4 <- system.file("extdata", "meta4.txt", package = "MAGEE")
   infile5 <- system.file("extdata", "meta5.txt", package = "MAGEE")
   outfile <- "glmm.gei.meta.testoutfile.txt"
-  glmm.gei.meta(files = c(infile1, infile2, infile3, infile4, infile5), outfile = outfile, interaction="sex")
+  glmm.gei.meta(files = c(infile1, infile2, infile3, infile4, infile5),outfile = outfile, interaction="sex")
   unlink(outfile)
 }
 \keyword{ generalized linear mixed model }
