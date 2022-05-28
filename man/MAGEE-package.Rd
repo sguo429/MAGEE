@@ -25,6 +25,8 @@ Maintainer: Han Chen <Han.Chen.2@uth.tmc.edu>
 Wang, X., Lim, E., Liu, C, Sung, Y.J., Rao, D.C., Morrison, A.C., Boerwinkle, E., Manning, A. K., and Chen, H. (2020) Efficient gene-environment interaction tests for large biobank-scale sequencing studies. Genetic Epidemiology, 44(8): 908-923.
 
 Chen, H., Huffman, J.E., Brody, J.A., Wang, C., Lee, S., Li, Z., Gogarten, S.M., Sofer, T., Bielak, L.F., Bis, J.C., et al. (2019) Efficient variant set mixed model association tests for continuous and binary traits in large-scale whole-genome sequencing studies. The American Journal of Human Genetics, 104 (2): 260-274.
+
+Wang, X., Pham, D.T., Westerman, K.E., Pan, C., Manning, A.K., Chen, H., (2022) Genomic summary statistics and meta-analysis for set-based gene-environment interaction tests in large-scale sequencing studies. medrxiv. 
 }
 \keyword{ package }
 \keyword{ generalized linear mixed model }

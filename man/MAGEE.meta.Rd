@@ -82,16 +82,7 @@ JF test p-value.
   \item{JD.pval}{
 JD test p-value.
 }
-\value{
-a data frame containing the following:
-  \item{SNP}{SNP name.}
-  \item{A1}{allele 1.}
-  \item{A2}{allele 2.}
-  \item{N}{total sample size.}
-  \item{AF}{effect allele frequency (user-defined: can be either allele 1 or allele 2).}
-  \item{G.SCORE}{the summary score of the effect allele.}
-  \item{K.SCORE.*}{the score of the environmental factor(s).}
-}
+
   
 }
 \references{

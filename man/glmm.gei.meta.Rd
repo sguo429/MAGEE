@@ -38,9 +38,20 @@ a character vector of Non_Effect_Allele column names in each input file. The len
 a character vector of Effect_Allele column names in each input file. The length and order must match the length and order of \code{files} (default = rep("Effect_Allele", length(files))).
 }
 }
+
+\value{
+a data frame containing the following:
+  \item{SNP}{SNP name.}
+  \item{A1}{allele 1.}
+  \item{A2}{allele 2.}
+  \item{N}{total sample size.}
+  \item{AF}{effect allele frequency (user-defined: can be either allele 1 or allele 2).}
+  \item{G.SCORE}{the summary score of the effect allele.}
+  \item{K.SCORE.*}{the score of the environmental factor(s).}
+}
+
 \references{
 Chen, H., Wang, C., Conomos, M.P., Stilp, A.M., Li, Z., Sofer, T., Szpiro, A.A., Chen, W., Brehm, J.M., Celedón, J.C., Redline, S., Papanicolaou, G.J., Thornton, T.A., Laurie, C.C., Rice, K. and Lin, X. (2016) Control forpopulation structure and relatedness for binary traits in genetic association studies via logistic mixed models. The American Journal of Human Genetics 98, 653-666.
-Wang, X., Pham, D.T., Westerman, K.E., Pan, C., Manning, A.K., Chen, H., (2022) Genomic summary statistics and meta-analysis for set-based gene-environment interaction tests in large-scale sequencing studies. medrxiv. 
 }
 \author{
 Xinyu Wang, Han Chen, Duy Pham
