@@ -41,13 +41,23 @@ a character vector of Effect_Allele column names in each input file. The length 
 
 \value{
 a data frame containing the following:
-  \item{SNP}{SNP name.}
-  \item{A1}{allele 1.}
-  \item{A2}{allele 2.}
-  \item{N}{total sample size.}
-  \item{AF}{effect allele frequency (user-defined: can be either allele 1 or allele 2).}
-  \item{G.SCORE}{the summary score of the effect allele.}
-  \item{K.SCORE.*}{the score of the environmental factor(s).}
+  \item{SNPID}{SNP name.}
+  \item{CHR}{chromosome.}
+  \item{POS}{physical position.}
+  \item{Non_Effect_Allele}{non_effect allele frequency.}
+  \item{Effect_Allele}{effect allele frequency.}
+  \item{N_Samples}{number of samples.}
+  \item{AF}{allele frequency.}
+  \item{Beta_Marginal}{coefficient estimate for the marginal genetic effect.}
+  \item{SE_Beta_Marginal}{standard error of the marginal genetic effect.}
+  \item{P_Value_Marginal}{marginal effect score test p-value.}
+  \item{Beta_G}{coefficient estimate for the genetic main effect.}
+  \item{Beta_G-*}{coefficient estimate for the interaction terms.}
+  \item{SE_Beta_G}{model-based standard error associated with the the genetic main effect.}
+  \item{SE_Beta_G-*}{mdel-based standard error associated with any GxE or interaction covariate terms.}
+  \item{Cov_Beta_G_G-*}{model-based covariance between the genetic main effect and any GxE or interaction covariate terms.}
+  \item{P_Value_Interaction}{gene-environment interaction test p-value.}
+  \item{P_Value_Joint}{joint test p-value.}
 }
 
 \references{
