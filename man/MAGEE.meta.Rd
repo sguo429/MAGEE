@@ -102,7 +102,10 @@ library(GMMAT)
   id = "id", family = binomial(link = "logit"))
   geno.file <- system.file("extdata", "geno.gds", package = "MAGEE")
   group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
-  out <- MAGEE(model0, interaction="sex",geno.file=gdsfile,group.file=group.file, meta.file.prefix = "MAGEE.meta", MAF.range = c(0, 0.5), miss.cutoff = 1, method = "davies", tests = c("JV","JF","JD"))
+  out <- MAGEE(model0, interaction="sex",geno.file=geno.file,
+	       group.file=group.file, meta.file.prefix = "MAGEE.meta",
+	       MAF.range = c(0, 0.5), miss.cutoff = 1,
+	       method = "davies", tests = c("JV","JF","JD"))
   print(out)
   out1 <- MAGEE.meta("MAGEE.meta", group.file = group.file, tests = c("JV","JF","JD"))
   print(out1)

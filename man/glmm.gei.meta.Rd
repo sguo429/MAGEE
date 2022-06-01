@@ -67,14 +67,17 @@ Chen, H., Wang, C., Conomos, M.P., Stilp, A.M., Li, Z., Sofer, T., Szpiro, A.A.,
 Xinyu Wang, Han Chen, Duy Pham
 }
 \examples{
+\donttest{
   infile1 <- system.file("extdata", "meta1.txt", package = "MAGEE")
   infile2 <- system.file("extdata", "meta2.txt", package = "MAGEE")
   infile3 <- system.file("extdata", "meta3.txt", package = "MAGEE")
   infile4 <- system.file("extdata", "meta4.txt", package = "MAGEE")
   infile5 <- system.file("extdata", "meta5.txt", package = "MAGEE")
   outfile <- "glmm.gei.meta.testoutfile.txt"
-  glmm.gei.meta(files = c(infile1, infile2, infile3, infile4, infile5),outfile = outfile, interaction="sex")
+  glmm.gei.meta(files = c(infile1, infile2, infile3, infile4, infile5),
+		outfile = outfile, interaction="sex")
   unlink(outfile)
+}
 }
 \keyword{ generalized linear mixed model }
 \keyword{ gene-environment interaction }
