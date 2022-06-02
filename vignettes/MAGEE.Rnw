@@ -457,7 +457,7 @@ Initial public release of \textit{MAGEE}.
 \item Fixed bugs on inverse of singular matrix \textbf{glmm.gei}.
 \end{enumerate}
 
-\subsection{Version 1.2.0 (May 26, 2022)}
+\subsection{Version 1.2.0 (June 2, 2022)}
 \begin{enumerate}
 \item Added meta-analysis functions \textbf{glmm.gei.meta} and \textbf{MAGEE.meta}.
 \end{enumerate}
