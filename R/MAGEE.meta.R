@@ -157,7 +157,7 @@ MAGEE.meta <- function(meta.files.prefix, n.files = rep(1, length(meta.files.pre
     }
     tmp.weight <- tmp.group.info$weight[match(variant.indices, tmp.idx)]
     if(use.minor.allele) tmp.weight[AF[include] > 0.5] <- -tmp.weight[AF[include] > 0.5]
-    tmp.weight <- tmp.weight * MAGEE:::MAF.weights.beta.fun(AF[include], MAF.weights.beta[1], MAF.weights.beta[2])
+    tmp.weight <- tmp.weight * MAF.weights.beta.fun(AF[include], MAF.weights.beta[1], MAF.weights.beta[2])
     if(!is.null(cohort.group.idx)) tmp.weight <- rep(tmp.weight, n.cohort.groups)
     V_i <- MASS::ginv(V)
     if(IV | IF | JV | JF | JD) {
@@ -170,9 +170,9 @@ MAGEE.meta <- function(meta.files.prefix, n.files = rep(1, length(meta.files.pre
       IV.U <- IV.U*rep(tmp.weight, n.E)
       IV.V <- t(IV.V*rep(tmp.weight, n.E))*rep(tmp.weight, n.E)
     }
-    if(MV | JV) MV.pval[i] <- tryCatch(MAGEE:::.quad_pval(U = U, V = V, method = method), error = function(e) { NA })
-    if(IV | JV) IV.pval[i] <- tryCatch(MAGEE:::.quad_pval(U = IV.U, V = IV.V, method = method), error = function(e) { NA })
-    if(JV) JV.pval[i] <- tryCatch(MAGEE:::fisher_pval(c(MV.pval[i], IV.pval[i])), error = function(e) { MV.pval[i] })
+    if(MV | JV) MV.pval[i] <- tryCatch(.quad_pval(U = U, V = V, method = method), error = function(e) { NA })
+    if(IV | JV) IV.pval[i] <- tryCatch(.quad_pval(U = IV.U, V = IV.V, method = method), error = function(e) { NA })
+    if(JV) JV.pval[i] <- tryCatch(fisher_pval(c(MV.pval[i], IV.pval[i])), error = function(e) { MV.pval[i] })
     if(MF | JF | JD) {
       MF.BU <- sum(U)
       MF.BV <- sum(V)
@@ -181,8 +181,8 @@ MAGEE.meta <- function(meta.files.prefix, n.files = rep(1, length(meta.files.pre
       MF.U <- U - V.rowSums * MF.BU / MF.BV
       MF.V <- V - tcrossprod(V.rowSums) / MF.BV
       if(MF.BV == 0 | mean(abs(MF.V)) < sqrt(.Machine$double.eps)) MF.p <- NA
-      else MF.p <- tryCatch(MAGEE:::.quad_pval(U = MF.U, V = MF.V, method = method), error = function(e) { NA })
-      MF.pval[i] <- tryCatch(MAGEE:::fisher_pval(c(MF.Bp, MF.p)), error = function(e) { MF.Bp })
+      else MF.p <- tryCatch(.quad_pval(U = MF.U, V = MF.V, method = method), error = function(e) { NA })
+      MF.pval[i] <- tryCatch(fisher_pval(c(MF.Bp, MF.p)), error = function(e) { MF.Bp })
     }
     if(IF | JF | JD) {
       IF.BU <- sum(IV.U)
@@ -192,11 +192,11 @@ MAGEE.meta <- function(meta.files.prefix, n.files = rep(1, length(meta.files.pre
       IF.U <- IV.U - IV.V.rowSums * IF.BU / IF.BV
       IF.V <- IV.V - tcrossprod(IV.V.rowSums) / IF.BV
       if(IF.BV == 0 | mean(abs(IF.V)) < sqrt(.Machine$double.eps)) IF.p <- NA
-      else IF.p <- tryCatch(MAGEE:::.quad_pval(U = IF.U, V = IF.V, method = method), error = function(e) { NA })
-      IF.pval[i] <- tryCatch(MAGEE:::fisher_pval(c(IF.Bp, IF.p)), error = function(e) { IF.Bp })
+      else IF.p <- tryCatch(.quad_pval(U = IF.U, V = IF.V, method = method), error = function(e) { NA })
+      IF.pval[i] <- tryCatch(fisher_pval(c(IF.Bp, IF.p)), error = function(e) { IF.Bp })
     }
-    if(JF) JF.pval[i] <- tryCatch(MAGEE:::fisher_pval(c(MF.Bp, MF.p, IF.Bp, IF.p)), error = function(e) { MF.Bp })
-    if(JD) JD.pval[i] <- tryCatch(MAGEE:::fisher_pval(c(MF.pval[i], IF.pval[i])), error = function(e) { MF.pval[i] })
+    if(JF) JF.pval[i] <- tryCatch(fisher_pval(c(MF.Bp, MF.p, IF.Bp, IF.p)), error = function(e) { MF.Bp })
+    if(JD) JD.pval[i] <- tryCatch(fisher_pval(c(MF.pval[i], IF.pval[i])), error = function(e) { MF.pval[i] })
   }
   for(i in 1:n.cohort) close(cons[[i]])
   out <- data.frame(group=unique(group.info$group), n.variants=n.variants)
