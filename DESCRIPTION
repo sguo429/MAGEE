@@ -1,7 +1,7 @@
 Package: MAGEE
 Type: Package
 Version: 1.2.0
-Date: 2022-05-31
+Date: 2022-06-02
 Title: Mixed Model Association Test for GEne-Environment Interaction
 Authors@R: c(person("Xinyu", "Wang", role = "aut", email = "xinyu.wang@uth.tmc.edu"),
              person("Han", "Chen", role = c("aut", "cre"), email = "han.chen.2@uth.tmc.edu"),
@@ -19,7 +19,7 @@ Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.2.0)
 NeedsCompilation: yes
-Packaged: 2022-05-26 11:09:37 UTC; hchen
+Packaged: 2022-06-02 11:09:37 UTC; hchen
 Author: Xinyu Wang [aut],
   Han Chen [aut, cre],
   Duy Pham [aut],
