@@ -17,7 +17,7 @@ MAGEE.meta <- function(meta.files.prefix, n.files = rep(1, length(meta.files.pre
   JF <- "JF" %in% tests
   JD <- "JD" %in% tests
   group.info <- try(read.table(group.file, header = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
-  if (class(group.info) == "try-error") {
+  if (inherits(group.info, "try-error")) {
     stop("Error: cannot read group.file!")
   }
   group.info <- group.info[!duplicated(paste(group.info$group, group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")), ]
@@ -33,7 +33,7 @@ MAGEE.meta <- function(meta.files.prefix, n.files = rep(1, length(meta.files.pre
     tmp.scores <- NULL
     for(j in 1:n.files[i]) { # n.files[i] is the number of cores for the i-th study
       tmp <- try(read.table(paste0(meta.files.prefix[i], ".score.", j), header = TRUE, as.is = TRUE))
-      if (class(tmp) == "try-error") {
+      if (inherits(tmp,"try-error")) {
         stop(paste0("Error: cannot read ", meta.files.prefix[i], ".score.", j, "!"))
       }
       tmp <- tmp[,c("group", "chr", "pos", "ref", "alt", "N", "missrate", "altfreq", "G.SCORE", paste("K.SCORE.", 1:(ncol(tmp)-9), sep=""))] # n.E = ncol(tmp)-9, number of environmental factor to test
