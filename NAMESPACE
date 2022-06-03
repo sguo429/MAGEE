@@ -11,5 +11,5 @@ importFrom("SeqArray", "seqOpen", "seqGetData", "seqClose", "seqSetFilter")
 importFrom("SeqVarTools", "missingGenotypeRate", "alleleFrequency", "altDosage")
 importFrom("GMMAT", "glmmkin", "glmm.score", "SMMAT")
 useDynLib(MAGEE, .registration = TRUE, .fixes = "C_")
-export(MAGEE, glmm.gei, MAGEE.prep, MAGEE.lowmem)
+export(MAGEE, glmm.gei,  MAGEE.prep, MAGEE.lowmem, MAGEE.meta, glmm.gei.meta)
 

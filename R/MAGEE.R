@@ -4,7 +4,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     ncores <- 1
   }
   if(!grepl("\\.gds$|\\.bgen$", geno.file[1])) stop("Error: only .gds and .bgen format is supported in geno.file!")
-  if(!class(null.obj) %in% c("glmmkin", "glmmkin.multi")) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
+  if(!inherits(null.obj,  c("glmmkin", "glmmkin.multi"))) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
   n.pheno <- null.obj$n.pheno
   missing.method <- try(match.arg(missing.method, c("impute2mean", "impute2zero")))
   if(inherits(missing.method, "try-error")) stop("Error: \"missing.method\" must be \"impute2mean\" or \"impute2zero\".")
@@ -16,7 +16,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
   JV <- "JV" %in% tests
   JF <- "JF" %in% tests
   JD <- "JD" %in% tests
-  if(!class(interaction) %in% c("integer", "numeric", "character")) stop("Error: \"interaction\" should be an integer, numeric, or character vector.")
+  if(!inherits(interaction, c("integer", "numeric", "character"))) stop("Error: \"interaction\" should be an integer, numeric, or character vector.")
   residuals <- null.obj$scaled.residuals
   n <- length(unique(null.obj$id_include))
   qi <- length(interaction.covariates) # number of covariates with interaction effects but we don't test
@@ -43,7 +43,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
   interaction <- as.character(interaction)
   n.E <- as.numeric(dim(E)[2]) # n.E = qi + ei
   if(grepl("\\.gds$", geno.file[1])){
-    if (class(geno.file)[1] != "SeqVarGDSClass") {
+    if (!inherits(geno.file, "SeqVarGDSClass")) {
       gds <- SeqArray::seqOpen(geno.file) 
     } else {
       gds <- geno.file
@@ -81,7 +81,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     ref <- unlist(lapply(alleles.list, function(x) x[1]))
     alt <- unlist(lapply(alleles.list, function(x) paste(x[-1], collapse=",")))
     rm(alleles.list); gc()
-    if (class(geno.file)[1] != "SeqVarGDSClass") {
+    if (!inherits(geno.file, "SeqVarGDSClass")) {
       SeqArray::seqClose(gds)
     }
     variant.id <- paste(chr, pos, ref, alt, sep = ":")
@@ -131,7 +131,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       out <- foreach(b=1:ncores, .combine=rbind, .multicombine = TRUE, .inorder=FALSE, .options.multicore = list(preschedule = FALSE, set.seed = FALSE)) %dopar% {
         idx <- if(b <= n.groups.percore_1) ((b-1)*(n.groups.percore-1)+1):(b*(n.groups.percore-1)) else (n.groups.percore_1*(n.groups.percore-1)+(b-n.groups.percore_1-1)*n.groups.percore+1):(n.groups.percore_1*(n.groups.percore-1)+(b-n.groups.percore_1)*n.groups.percore)
         n.groups <- length(idx)
-        if (class(geno.file)[1] != "SeqVarGDSClass") {
+        if (!inherits(geno.file, "SeqVarGDSClass")) {
           gds <- SeqArray::seqOpen(geno.file)
         } else {
           gds <- geno.file
@@ -219,8 +219,8 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           if(!is.null(interaction.covariates) && (JV | JF | JD)) {
             c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
             CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-            if(class(CPC_i)[1] == "try-error") CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
-	    if(class(CPC_i)[1] == "try-error") next
+            if(inherits(CPC_i, "try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+	    if(inherits(CPC_i, "try-error")) next
             U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
             V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
           }
@@ -232,8 +232,8 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
               KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
             }
             V_i <- try(solve(V), silent = TRUE)
-            if(class(V_i)[1] == "try-error") V_i <- try(MASS::ginv(V), silent = TRUE)
-	    if(class(V_i)[1] == "try-error") next
+            if(inherits(V_i, "try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
+	    if(inherits(V_i, "try-error")) next
             KPG <- crossprod(K,PG)
             IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
             IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
@@ -336,13 +336,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         if(JD) tmp.out$JD.pval <- JD.pval
         tmp.out
       }
-      if (class(geno.file)[1] == "SeqVarGDSClass") {
+      if (inherits(geno.file, "SeqVarGDSClass")) {
     	SeqArray::seqClose(geno.file)
       }
       return(out)
     } else { # use a single core
       n.groups <- n.groups.all
-      if (class(geno.file)[1] != "SeqVarGDSClass") {
+      if (!inherits(geno.file, "SeqVarGDSClass")) {
         gds <- SeqArray::seqOpen(geno.file)
       }
       SeqArray::seqSetFilter(gds, sample.id = sample.id, verbose = FALSE)
@@ -428,8 +428,8 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         if(!is.null(interaction.covariates) && (JV | JF | JD)) {
           c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
           CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-          if(class(CPC_i)[1] == "try-error") CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
-	  if(class(CPC_i)[1] == "try-error") next
+          if(inherits(CPC_i, "try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+	  if(inherits(CPC_i, "try-error")) next
           U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
           V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
         }
@@ -441,8 +441,8 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
             KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
           }
           V_i <- try(solve(V), silent = TRUE)
-          if(class(V_i)[1] == "try-error") V_i <- try(MASS::ginv(V), silent = TRUE)
-	  if(class(V_i)[1] == "try-error") next
+          if(inherits(V_i, "try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
+	  if(inherits(V_i, "try-error")) next
           KPG <- crossprod(K,PG)
           IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
           IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
@@ -595,7 +595,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     gc()
     variant.idx <- 1:length(variant.id)
     group.info <- try(read.table(group.file, header = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
-    if (class(group.info)[1] == "try-error") {
+    if (inherits(group.info, "try-error")) {
       stop("Error: cannot read group.file!")
     }
     group.info <- group.info[!duplicated(paste(group.info$group, group.info$chr, group.info$pos, group.info$ref, group.info$alt, sep = ":")), ]
@@ -726,8 +726,8 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
           if(!is.null(interaction.covariates) && (JV | JF | JD)) {
             c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
             CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-            if(class(CPC_i)[1] == "try-error") CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
-            if(class(CPC_i)[1] == "try-error") next
+            if(inherits(CPC_i, "try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+            if(inherits(CPC_i, "try-error")) next
             U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
             V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
           }
@@ -739,8 +739,8 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
               KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
             }
             V_i <- try(solve(V), silent = TRUE)
-            if(class(V_i)[1] == "try-error") V_i <- try(MASS::ginv(V), silent = TRUE)
-            if(class(V_i)[1] == "try-error") next
+            if(inherits(V_i, "try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
+            if(inherits(V_i, "try-error")) next
             KPG <- crossprod(K,PG)
             IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
             IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
@@ -929,8 +929,8 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
         if(!is.null(interaction.covariates) && (JV | JF | JD)) {
           c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
           CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-          if(class(CPC_i)[1] == "try-error") CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
-          if(class(CPC_i)[1] == "try-error") next
+          if(inherits(CPC_i, "try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+          if(inherits(CPC_i, "try-error")) next
           U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
           V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
         }
@@ -942,8 +942,8 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
             KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
           }
           V_i <- try(solve(V), silent = TRUE)
-          if(class(V_i)[1] == "try-error") V_i <- try(MASS::ginv(V), silent = TRUE)
-          if(class(V_i)[1] == "try-error") next
+          if(inherits(V_i,"try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
+          if(inherits(V_i, "try-error")) next
           KPG <- crossprod(K,PG)
           IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
           IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
@@ -1052,7 +1052,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
 .Q_pval <- function(Q, lambda, method = "davies") {
   if(method == "davies") {
     tmp <- try(suppressWarnings(CompQuadForm::davies(q = Q, lambda = lambda, acc = 1e-6)))
-    if(class(tmp) == "try-error" || tmp$ifault > 0 || tmp$Qq <= 1e-5 || tmp$Qq >= 1) method <- "kuonen"
+    if(inherits(tmp, "try-error") || tmp$ifault > 0 || tmp$Qq <= 1e-5 || tmp$Qq >= 1) method <- "kuonen"
     else return(tmp$Qq)
   }
   if(method == "kuonen") {
@@ -1137,7 +1137,7 @@ fisher_pval <- function(p) {
 MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction.covariates = NULL, group.file.sep = "\t", auto.flip = FALSE)
 {
   if(!grepl("\\.gds$", geno.file[1])) stop("Error: currently only .gds format is supported in geno.file for MAGEE.prep!")
-  if(!class(null.obj) %in% c("glmmkin", "glmmkin.multi")) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
+  if(!inherits(null.obj, c("glmmkin", "glmmkin.multi"))) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
   n.pheno <- null.obj$n.pheno
   residuals <- null.obj$scaled.residuals
   n <- length(unique(null.obj$id_include))
@@ -1166,7 +1166,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   interaction <- as.character(interaction)
   n.E <- as.numeric(dim(E)[2]) # n.E = qi + ei
   
-  if (class(geno.file)[1] != "SeqVarGDSClass") {
+  if (!inherits(geno.file, "SeqVarGDSClass")) {
     gds <- SeqArray::seqOpen(geno.file) 
   } else {
     gds <- geno.file
@@ -1212,7 +1212,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   ref <- unlist(lapply(alleles.list, function(x) x[1]))
   alt <- unlist(lapply(alleles.list, function(x) paste(x[-1], collapse=",")))
   rm(alleles.list); gc()
-  if (class(geno.file)[1] != "SeqVarGDSClass") {
+  if (!inherits(geno.file, "SeqVarGDSClass")) {
     SeqArray::seqClose(gds)
   }
   variant.id <- paste(chr, pos, ref, alt, sep = ":")
@@ -1260,7 +1260,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
 
 MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NULL, MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, missing.method = "impute2mean", method = "davies", tests = "JF", use.minor.allele = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1)
 {
-  if(class(MAGEE.prep.obj) != "MAGEE.prep") stop("Error: MAGEE.prep.obj must be a class MAGEE.prep object!")
+  if(!inherits(MAGEE.prep.obj, "MAGEE.prep")) stop("Error: MAGEE.prep.obj must be a class MAGEE.prep object!")
   is.Windows <- Sys.info()["sysname"] == "Windows"
   if(is.Windows && ncores > 1) {
     warning("The package doMC is not available on Windows... Switching to single thread...")
@@ -1286,7 +1286,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
   qi <- MAGEE.prep.obj$qi
   
   rm(MAGEE.prep.obj); gc()
-  if(!class(null.obj) %in% c("glmmkin", "glmmkin.multi")) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
+  if(!inherits(null.obj, c("glmmkin", "glmmkin.multi"))) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
   n.pheno <- null.obj$n.pheno
   n.E <- as.numeric(dim(E)[2])
   missing.method <- try(match.arg(missing.method, c("impute2mean", "impute2zero")))
@@ -1310,7 +1310,7 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
     out <- foreach(b=1:ncores, .combine=rbind, .multicombine = TRUE, .inorder=FALSE, .options.multicore = list(preschedule = FALSE, set.seed = FALSE)) %dopar% {
       idx <- if(b <= n.groups.percore_1) ((b-1)*(n.groups.percore-1)+1):(b*(n.groups.percore-1)) else (n.groups.percore_1*(n.groups.percore-1)+(b-n.groups.percore_1-1)*n.groups.percore+1):(n.groups.percore_1*(n.groups.percore-1)+(b-n.groups.percore_1)*n.groups.percore)
       n.groups <- length(idx)
-      if (class(geno.file)[1] != "SeqVarGDSClass") {
+      if (!inherits(geno.file, "SeqVarGDSClass")) {
         gds <- SeqArray::seqOpen(geno.file)
       } else {
         gds <- geno.file
@@ -1397,8 +1397,8 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
         if((qi != 0) && (JV | JF | JD)) {
           c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
           CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-          if(class(CPC_i)[1] == "try-error") CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
-          if(class(CPC_i)[1] == "try-error") next
+          if(inherits(CPC_i,"try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+          if(inherits(CPC_i,"try-error")) next
           U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
           V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
         }
@@ -1410,8 +1410,8 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
             KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
           }
           V_i <- try(solve(V), silent = TRUE)
-          if(class(V_i)[1] == "try-error") V_i <- try(MASS::ginv(V), silent = TRUE)
-          if(class(V_i)[1] == "try-error") next
+          if(inherits(V_i, "try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
+          if(inherits(V_i, "try-error")) next
           KPG <- crossprod(K,PG)
           IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
           IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
@@ -1509,13 +1509,13 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
       if(JD) tmp.out$JD.pval <- JD.pval
       tmp.out
     }
-    if (class(geno.file)[1] == "SeqVarGDSClass") {
+    if (inherits(geno.file, "SeqVarGDSClass")) {
       SeqArray::seqClose(geno.file)
     }
     return(out)
   } else { # use a single core
     n.groups <- n.groups.all
-    if (class(geno.file)[1] != "SeqVarGDSClass") {
+    if (!inherits(geno.file, "SeqVarGDSClass")) {
       gds <- SeqArray::seqOpen(geno.file)
     }
     SeqArray::seqSetFilter(gds, sample.id = sample.id, verbose = FALSE)
@@ -1600,8 +1600,8 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
       if((qi != 0) && (JV | JF | JD)) {
         c2 <- rep((n.p+1):(n.p*(1+qi)),n.pheno)+rep((0:(n.pheno-1))*n.p*(1+qi), each=n.p*qi) # index for CPC and col.index for GPC
         CPC_i <- try(solve(V[c2,c2]), silent = TRUE)
-        if(class(CPC_i)[1] == "try-error") CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
-        if(class(CPC_i)[1] == "try-error") next
+        if(inherits(CPC_i, "try-error") || any(diag(CPC_i)<0)) CPC_i <- try(MASS::ginv(V[c2,c2]), silent = TRUE)
+        if(inherits(CPC_i, "try-error")) next
         U.adj <- U[c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),t(U[c2]))
         V.adj <- V[c1,c1] - tcrossprod(tcrossprod(V[c1,c2],CPC_i),V[c1,c2])
       }
@@ -1613,8 +1613,8 @@ MAGEE.lowmem <- function(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NU
           KPK <- crossprod(K, crossprod(null.obj$Sigma_i, K)) - tcrossprod(KSigma_iX, tcrossprod(KSigma_iX, null.obj$cov))
         }
         V_i <- try(solve(V), silent = TRUE)
-        if(class(V_i)[1] == "try-error") V_i <- try(MASS::ginv(V), silent = TRUE)
-        if(class(V_i)[1] == "try-error") next
+        if(inherits(V_i, "try-error") || any(diag(V_i)<0)) V_i <- try(MASS::ginv(V), silent = TRUE)
+        if(inherits(V_i,"try-error")) next
         KPG <- crossprod(K,PG)
         IV.U <- SK - tcrossprod(tcrossprod(KPG,V_i),t(U))
         IV.V <- KPK - tcrossprod(tcrossprod(KPG,V_i),KPG)
