@@ -16,7 +16,7 @@ MAGEE.meta <- function(meta.files.prefix, n.files = rep(1, length(meta.files.pre
   JV <- "JV" %in% tests
   JF <- "JF" %in% tests
   JD <- "JD" %in% tests
-  group.info <- try(read.table(group.file, header = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
+  group.info <- try(fread(group.file, header = FALSE, data.table = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
   if (inherits(group.info, "try-error")) {
     stop("Error: cannot read group.file!")
   }
@@ -32,7 +32,7 @@ MAGEE.meta <- function(meta.files.prefix, n.files = rep(1, length(meta.files.pre
   for(i in 1:n.cohort) { # Read the scores for each study from each core
     tmp.scores <- NULL
     for(j in 1:n.files[i]) { # n.files[i] is the number of cores for the i-th study
-      tmp <- try(read.table(paste0(meta.files.prefix[i], ".score.", j), header = TRUE, as.is = TRUE))
+      tmp <- try(fread(paste0(meta.files.prefix[i], ".score.", j), header = TRUE, data.table = FALSE))
       if (inherits(tmp,"try-error")) {
         stop(paste0("Error: cannot read ", meta.files.prefix[i], ".score.", j, "!"))
       }
