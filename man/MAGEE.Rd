@@ -12,7 +12,7 @@ Use a glmmkin class object from the null GLMM to perform variant set-based main 
 \usage{
 MAGEE(null.obj, interaction, geno.file, group.file,  group.file.sep = "\t", 
       bgen.samplefile = NULL, interaction.covariates = NULL, meta.file.prefix = NULL,
-      MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, 
+      MAF.range = c(1e-7, 0.5), AF.strata.range = c(0, 1), MAF.weights.beta = c(1, 25), miss.cutoff = 1, 
       missing.method = "impute2mean", method = "davies", tests = "JF", 
       use.minor.allele = FALSE, auto.flip = FALSE, 
       Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1)
@@ -21,7 +21,7 @@ MAGEE.prep(null.obj, interaction, geno.file, group.file, interaction.covariates 
            group.file.sep = "\t", auto.flip = FALSE)
            
 MAGEE.lowmem(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NULL, 
-             MAF.range = c(1e-7, 0.5), MAF.weights.beta = c(1, 25), miss.cutoff = 1, 
+             MAF.range = c(1e-7, 0.5), AF.strata.range = c(0, 1), MAF.weights.beta = c(1, 25), miss.cutoff = 1, 
              missing.method = "impute2mean", method = "davies", tests = "JF", 
              use.minor.allele = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE,
 	     ncores = 1)
@@ -54,6 +54,9 @@ the prefix for meta-analysis (default = \code{"NULL"}).
 }
   \item{MAF.range}{
 a numeric vector of length 2 defining the minimum and maximum minor allele frequencies of variants that should be included in the analysis (default = c(1e-7, 0.5)).
+}
+  \item{AF.strata.range}{
+a numeric vector of length 2 defining the minimum and maximum coding allele frequencies of variants in each stratum that should be included in the analysis, if the environmental factor is categorical (default = c(0, 1)).
 }
   \item{MAF.weights.beta}{
 a numeric vector of length 2 defining the beta probability density function parameters on the minor allele frequencies. This internal minor allele frequency weight is multiplied by the external weight given by the group.file. To turn off internal minor allele frequency weight and only use the external weight given by the group.file, use c(1, 1) to assign flat weights (default = c(1, 25)).
@@ -116,10 +119,10 @@ mean coding allele frequency for variants in the test unit group.
 maximum coding allele frequency for variants in the test unit group.
 }
   \item{freq.strata.min}{
-minimum coding allele frequency of each strata if the environmental factor is categorical.
+minimum coding allele frequency of each stratum if the environmental factor is categorical.
 }
   \item{freq.strata.max}{
-maximum coding allele frequency of each strata if the environmental factor is categorical.
+maximum coding allele frequency of each stratum if the environmental factor is categorical.
 }
   \item{MV.pval}{
 MV test p-value.
