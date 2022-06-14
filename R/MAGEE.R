@@ -86,7 +86,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     }
     variant.id <- paste(chr, pos, ref, alt, sep = ":")
     rm(chr, pos, ref, alt); gc()
-    group.info <- try(read.table(group.file, header = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
+    group.info <- try(fread(group.file, header = FALSE, data.table = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
     if (inherits(group.info, "try-error")) {
       stop("Error: cannot read group.file!")
     }
@@ -551,7 +551,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       if (is.null(bgen.samplefile)) {
         stop("Error: bgen file does not contain sample identifiers. A .sample file (bgen.samplefile) is needed.")
       }
-      sample.id <- read.table(bgen.samplefile, header = TRUE, sep = " ")
+      sample.id <- fread(bgen.samplefile, header = TRUE, data.table = FALSE)
       if ((nrow(sample.id)-1) != bgenInfo$N){
         stop(paste0("Error: Number of sample identifiers in BGEN sample file (", nrow(sample.id)-1, ") does not match number of samples in BGEN file (", bgenInfo$N,")."))
       }
@@ -594,7 +594,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
     variant.id <- paste(bgenVariant$VariantInfo$CHR, bgenVariant$VariantInfo$POS, bgenVariant$VariantInfo$A1, bgenVariant$VariantInfo$A2, sep = ":")
     gc()
     variant.idx <- 1:length(variant.id)
-    group.info <- try(read.table(group.file, header = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
+    group.info <- try(fread(group.file, header = FALSE, data.table = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
     if (inherits(group.info, "try-error")) {
       stop("Error: cannot read group.file!")
     }
@@ -1217,7 +1217,7 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
   }
   variant.id <- paste(chr, pos, ref, alt, sep = ":")
   rm(chr, pos, ref, alt); gc()
-  group.info <- try(read.table(group.file, header = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
+  group.info <- try(fread(group.file, header = FALSE, data.table = FALSE, col.names = c("group", "chr", "pos", "ref", "alt", "weight"), colClasses = c("character","character","integer","character","character","numeric"), sep = group.file.sep), silent = TRUE)
   if (inherits(group.info, "try-error")) {
     stop("Error: cannot read group.file!")
   }
