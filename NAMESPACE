@@ -7,6 +7,7 @@ importFrom("stats", "as.formula", "binomial", "dbeta", "glm", "model.frame",
 "pnorm", "uniroot", "integrate", "weights", "vcov")
 importFrom("utils", "read.table", "write.table")
 importFrom("CompQuadForm", "davies", "liu")
+importFrom("data.table", "fread")
 importFrom("SeqArray", "seqOpen", "seqGetData", "seqClose", "seqSetFilter")
 importFrom("SeqVarTools", "missingGenotypeRate", "alleleFrequency", "altDosage")
 importFrom("GMMAT", "glmmkin", "glmm.score", "SMMAT")

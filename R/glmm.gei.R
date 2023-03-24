@@ -651,7 +651,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
       if (is.null(bgen.samplefile)) {
         stop("Error: bgen file does not contain sample identifiers. A .sample file (bgen.samplefile) is needed.")
       }
-      sample.id <- read.table(bgen.samplefile, header = TRUE, sep = " ")
+      sample.id <- fread(bgen.samplefile, header = TRUE, data.table = FALSE)
       if ((nrow(sample.id)-1) != bgenInfo$N){
         stop(paste0("Error: Number of sample identifiers in BGEN sample file (", nrow(sample.id)-1, ") does not match number of samples in BGEN file (", bgenInfo$N,")."))
       }

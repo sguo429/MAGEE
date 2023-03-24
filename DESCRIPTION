@@ -12,7 +12,7 @@ Description: Use a 'glmmkin' class object (GMMAT package) from the null model to
 License: GPL-3
 Copyright: See COPYRIGHTS for details.
 Imports: Rcpp, Matrix, parallel, MASS, SeqArray, SeqVarTools, foreach,
-        GMMAT, CompQuadForm
+        GMMAT, CompQuadForm, data.table
 Suggests: doMC, testthat
 LinkingTo: Rcpp, RcppArmadillo
 Encoding: UTF-8

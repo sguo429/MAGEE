@@ -6,7 +6,7 @@ glmm.gei.meta <- function(files, outfile, interaction, SNPID = rep("SNPID", leng
   if(length(Non_Effect_Allele) != k) stop("Error: \"Non_Effect_Allele\" must have the same length as \"files\"!")
   if(length(Effect_Allele) != k) stop("Error: \"Effect_Allele\" must have the same length as \"files\"!")
   col.include <- c("Beta_Marginal", "SE_Beta_Marginal", "P_Value_Marginal", "Beta_G", paste0("Beta_G.",interaction), "SE_Beta_G", paste0("SE_Beta_G.", interaction), paste0("Cov_Beta_G_G.", interaction), "P_Value_Interaction", "P_Value_Joint")
-  master <- read.table(files[1], header=T, as.is=T)[, c(SNPID[1], CHR[1], POS[1],Non_Effect_Allele[1], Effect_Allele[1], "N_Samples", "AF", col.include)]
+  master <- fread(files[1], header=T, data.table = FALSE)[, c(SNPID[1], CHR[1], POS[1],Non_Effect_Allele[1], Effect_Allele[1], "N_Samples", "AF", col.include)]
   names(master)[1:5] <- c("SNPID", "CHR", "POS", "Non_Effect_Allele", "Effect_Allele")
   master <- master[apply(!is.na(master[, col.include]), 1, all),]
   master$SNPID <- paste(master$CHR, master$POS, master$Non_Effect_Allele, master$Effect_Allele, sep = ":")
@@ -23,7 +23,7 @@ glmm.gei.meta <- function(files, outfile, interaction, SNPID = rep("SNPID", leng
   flag <- rep(0, nrow(master))
   if(k > 1) {
     for(i in 2:k) {
-      tmp <- read.table(files[i], header=T, as.is=T)[, c(SNPID[i], CHR[i],POS[i],Non_Effect_Allele[i], Effect_Allele[i], "N_Samples", "AF", col.include)]
+      tmp <- fread(files[i], header=T, data.table = FALSE)[, c(SNPID[i], CHR[i],POS[i],Non_Effect_Allele[i], Effect_Allele[i], "N_Samples", "AF", col.include)]
       names(tmp)[1:5] <- c("SNPID", "CHR", "POS", "Non_Effect_Allele", "Effect_Allele")
       tmp <- tmp[apply(!is.na(tmp[, col.include]), 1, all),]
       tmp$SNPID <- paste(tmp$CHR, tmp$POS, tmp$Non_Effect_Allele, tmp$Effect_Allele, sep = ":")
