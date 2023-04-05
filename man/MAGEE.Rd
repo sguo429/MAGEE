@@ -12,8 +12,8 @@ Use a glmmkin class object from the null GLMM to perform variant set-based main 
 \usage{
 MAGEE(null.obj, interaction, geno.file, group.file,  group.file.sep = "\t", 
       bgen.samplefile = NULL, interaction.covariates = NULL, meta.file.prefix = NULL,
-      MAF.range = c(1e-7, 0.5), AF.strata.range = c(0, 1), MAF.weights.beta = c(1, 25), miss.cutoff = 1, 
-      missing.method = "impute2mean", method = "davies", tests = "JF", 
+      MAF.range = c(1e-7, 0.5), AF.strata.range = c(0, 1), MAF.weights.beta = c(1, 25), 
+      miss.cutoff = 1, missing.method = "impute2mean", method = "davies", tests = "JF", 
       use.minor.allele = FALSE, auto.flip = FALSE, 
       Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1)
 
@@ -21,10 +21,10 @@ MAGEE.prep(null.obj, interaction, geno.file, group.file, interaction.covariates 
            group.file.sep = "\t", auto.flip = FALSE)
            
 MAGEE.lowmem(MAGEE.prep.obj, geno.file = NULL, meta.file.prefix = NULL, 
-             MAF.range = c(1e-7, 0.5), AF.strata.range = c(0, 1), MAF.weights.beta = c(1, 25), miss.cutoff = 1, 
-             missing.method = "impute2mean", method = "davies", tests = "JF", 
-             use.minor.allele = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE,
-	     ncores = 1)
+             MAF.range = c(1e-7, 0.5), AF.strata.range = c(0, 1), 
+             MAF.weights.beta = c(1, 25), miss.cutoff = 1, missing.method = "impute2mean",
+             method = "davies", tests = "JF", use.minor.allele = FALSE, 
+	     Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1)
 }
 
 \arguments{

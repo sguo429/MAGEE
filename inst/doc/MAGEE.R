@@ -6,7 +6,7 @@
 ## ## try http:// if https:// URLs are not supported
 ## ## remove "doMC" below if you are running Windows
 ## install.packages(c("devtools", "RcppArmadillo", "CompQuadForm", "doMC", 
-##         "foreach", "Matrix", "GMMAT", "BiocManager", "testthat"), 
+##         "foreach", "Matrix", "GMMAT", "BiocManager", "testthat", "data.table"), 
 ## 	repos = "https://cran.r-project.org/")
 ## BiocManager::install(c("SeqArray", "SeqVarTools"))
 ## devtools::install_github("https://github.com/large-scale-gxe-methods/MAGEE")

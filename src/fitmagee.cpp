@@ -1,5 +1,5 @@
 /*  MAGEE : An R Package for Mixed Model Association Test for GEne-Environment Interaction
- *  Copyright (C) 2020  Xinyu Wang, Han Chen
+ *  Copyright (C) 2020--2023  Xinyu Wang, Han Chen, Duy T. Pham
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -48,8 +48,8 @@
 #include <R.h>
 #include <Rmath.h>
 #include "read_bgen.h"
-#include "zstd-1.4.5/lib/zstd.h"
-#include "libdeflate-1.7/libdeflate.h"
+#include "zstd/lib/zstd.h"
+#include "libdeflate/libdeflate.h"
 using namespace std;
 using namespace arma;
 using namespace Rcpp;
@@ -60,8 +60,9 @@ typedef unsigned char uchar;
 typedef unsigned short ushort;
 typedef long long unsigned int llui;
 
+#ifndef DBL_EPSILON
 #define DBL_EPSILON 2.2204460492503131e-16;
-
+#endif
 
 extern "C" {
   
