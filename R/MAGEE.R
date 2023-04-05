@@ -555,7 +555,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       if ((nrow(sample.id)-1) != bgenInfo$N){
         stop(paste0("Error: Number of sample identifiers in BGEN sample file (", nrow(sample.id)-1, ") does not match number of samples in BGEN file (", bgenInfo$N,")."))
       }
-      sample.id <- sample.id[-1, 1]
+      sample.id <- sample.id[-1, 2]
     } else {
       sample.id <- bgenInfo$SampleIds
     }
