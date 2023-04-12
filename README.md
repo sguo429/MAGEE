@@ -12,10 +12,10 @@ See Section 3.2 of the <a href="https://github.com/large-scale-gxe-methods/MAGEE
 For optimal computational performance, it is recommended to use an R version configured with the Intel Math Kernel Library (or other fast BLAS/LAPACK libraries). See the <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/using-onemkl-with-r.html">instructions</a> on building R with Intel MKL.
 
 ## Version
-The current version is 1.3.0 (April 5, 2023).
+The current version is 1.3.0 (April 12, 2023).
 
 ## License
-This software is licensed under GPL-3.
+This software is licensed under GPL (>= 3).
 
 ## Contact
 Please refer to the R help document of MAGEE for specific questions about each function. For comments, suggestions, bug reports and questions, please contact Han Chen (Han.Chen.2 AT uth.tmc.edu). For bug reports, please include an example to reproduce the problem without having to access your confidential data.
