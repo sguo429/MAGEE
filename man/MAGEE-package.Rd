@@ -12,7 +12,7 @@ An R package for performing generalized linear mixed model-based single-variant 
 Package: \tab MAGEE\cr
 Type: \tab Package\cr
 Version: \tab 1.3.0\cr
-Date: \tab 2023-04-05\cr
+Date: \tab 2023-04-12\cr
 License: \tab GPL-3\cr
 }
 }
