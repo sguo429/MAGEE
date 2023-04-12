@@ -20,3 +20,15 @@ LinkingTo: Rcpp, RcppArmadillo
 Encoding: UTF-8
 Depends: R (>= 3.2.0)
 NeedsCompilation: yes
+Author: Xinyu Wang [aut],
+  Han Chen [aut, cre],
+  Duy Pham [aut],
+  Kenneth Westerman [ctb],
+  Cong Pan [aut],
+  Eric Biggers [ctb, cph] (Author and copyright holder of included
+    libdeflate library),
+  Tino Reichardt [ctb, cph] (Author and copyright holder of threading
+    code used in the included Zstandard (zstd) library),
+  Meta Platforms, Inc. and affiliates [cph] (Copyright holder of included
+    Zstandard (zstd) library)
+Maintainer: Han Chen <han.chen.2@uth.tmc.edu>
