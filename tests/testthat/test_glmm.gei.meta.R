@@ -1,5 +1,3 @@
-context("single-variant GEI and Joint test meta-analysis")
-
 test_that("single-variant GEI and Joint test meta-analysis", {
   infile1 <- system.file("extdata", "meta1.txt", package = "MAGEE")
   infile2 <- system.file("extdata", "meta2.txt", package = "MAGEE")
@@ -15,6 +13,6 @@ test_that("single-variant GEI and Joint test meta-analysis", {
   expect_equal(signif(out$P_Value_Marginal, 5), signif(outPval, 5))
   expect_equal(signif(out$P_Value_Joint, 5), signif(outPjoint, 5))
   expect_equal(signif(out$P_Value_Interaction, 5), signif(outPInter, 5))
-  unlink(c(out,outPval,outPInter,outPjoint))
+  unlink(outfile)
 })
 

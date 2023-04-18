@@ -65,8 +65,8 @@ glmm.gei.meta <- function(files, outfile, interaction, SNPID = rep("SNPID", leng
       master$jointVAR22[idx2] <- master$jointVAR22[idx2] + tmp$jointVAR22[idx]
     }
     if(any(flag > 0)) {
-      cat("The following SNPIDs have been removed due to inconsistent alleles across studies:\n")
-      print(master$SNPID[flag > 0])
+      message("The following SNPIDs have been removed due to inconsistent alleles across studies:")
+      message(paste(master$SNPID[flag > 0], collapse = ", "))
       master <- subset(master, flag == 0)
     }
     master$Beta_Marginal <- master$SCORE/master$VAR

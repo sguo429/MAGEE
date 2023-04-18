@@ -1,6 +1,6 @@
-glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=NULL, interaction.covariates=NULL, meta.output=F, center=T, MAF.range = c(1e-7, 0.5), miss.cutoff = 1, missing.method = "impute2mean", nperbatch=100, ncores = 1, verbose = FALSE){
+glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=NULL, interaction.covariates=NULL, meta.output=FALSE, center=TRUE, MAF.range = c(1e-7, 0.5), miss.cutoff = 1, missing.method = "impute2mean", nperbatch=100, ncores = 1, verbose = FALSE){
   if(Sys.info()["sysname"] == "Windows" && ncores > 1) {
-    warning("The package doMC is not available on Windows... Switching to single thread...")
+    warning("The package doMC is not available on Windows... Switching to single thread...", call. = FALSE)
     ncores <- 1
   }
 
@@ -44,7 +44,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
     }
     sample.id <- SeqArray::seqGetData(gds, "sample.id")
     variant.idx.all <- SeqArray::seqGetData(gds, "variant.id")
-    if(any(is.na(match(null.obj$id_include, sample.id)))) warning("Check your data... Some individuals in null.obj$id_include are missing in sample.id of geno.file!")
+    if(any(is.na(match(null.obj$id_include, sample.id)))) warning("Check your data... Some individuals in null.obj$id_include are missing in sample.id of geno.file!", call. = FALSE)
     sample.id <- sample.id[sample.id %in% null.obj$id_include]
     if(length(sample.id) == 0) stop("Error: null.obj$id_include does not match sample.id in geno.file!")
     #J <- NULL
@@ -660,7 +660,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
       sample.id <- bgenInfo$SampleIds
     }
     
-    if(any(is.na(match(null.obj$id_include, sample.id)))) warning("Check your data... Some individuals in null.obj$id_include are missing in sample.id of bgen sample file!")
+    if(any(is.na(match(null.obj$id_include, sample.id)))) warning("Check your data... Some individuals in null.obj$id_include are missing in sample.id of bgen sample file!", call. = FALSE)
 
     sample.id_original<-sample.id
     sample.id <- sample.id[sample.id %in% unique(null.obj$id_include)]
@@ -733,8 +733,8 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
     p.all <- length(variant.idx.all)
 
     if (ncores > bgenInfo$M) {
+      warning("Number of cores (", ncores, ") is greater than number of variants in BGEN files (", bgenInfo$M, "). Using ", bgenInfo$M, " cores instead.", call. = FALSE)
       ncores <- bgenInfo$M
-      print(paste0("Warning: number of cores (", ncores,") is greater than number of variants in BGEN files (", bgenInfo$M,"). Using ", ncores, " instead."))
     }
     
     threadInfo <- .Call("getVariantPos", geno.file, bgenInfo$offset, bgenInfo$M, bgenInfo$N, bgenInfo$CompressionFlag, bgenInfo$LayoutFlag, ncores)

@@ -8,9 +8,9 @@ Use a glmmkin class object from the null GLMM to perform single variant main eff
 }
 \usage{
 glmm.gei(null.obj, interaction, geno.file, outfile, bgen.samplefile = NULL, 
-  interaction.covariates = NULL,  meta.output = F, center=T, MAF.range = c(1e-7, 0.5), 
-  miss.cutoff = 1, missing.method = "impute2mean", nperbatch=100, ncores = 1,
-  verbose = FALSE)
+  interaction.covariates = NULL,  meta.output = FALSE, center=TRUE, 
+  MAF.range = c(1e-7, 0.5), miss.cutoff = 1, missing.method = "impute2mean", 
+  nperbatch=100, ncores = 1, verbose = FALSE)
 }
 \arguments{
   \item{null.obj}{
@@ -83,7 +83,7 @@ Xinyu Wang, Han Chen, Duy Pham
   glmm.gei(model0, interaction='sex', geno.file = infile, outfile = bgen_outfile,
            bgen.samplefile = samplefile)
   
-  unlink(paste0("glmm.gei.", c("gds","bgen"), bgen_outfile, gds_outfile))
+  unlink(c(bgen_outfile, gds_outfile))
 }
 \keyword{ generalized linear mixed model }
 \keyword{ gene-environment interaction }

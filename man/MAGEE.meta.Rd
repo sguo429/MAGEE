@@ -102,14 +102,15 @@ library(GMMAT)
   id = "id", family = binomial(link = "logit"))
   geno.file <- system.file("extdata", "geno.gds", package = "MAGEE")
   group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
+  meta.file.prefix <- tempfile()
   out <- MAGEE(model0, interaction="sex",geno.file=geno.file,
-	       group.file=group.file, meta.file.prefix = "MAGEE.meta",
+	       group.file=group.file, meta.file.prefix = meta.file.prefix,
 	       MAF.range = c(0, 0.5), miss.cutoff = 1,
 	       method = "davies", tests = c("JV","JF","JD"))
   print(out)
-  out1 <- MAGEE.meta("MAGEE.meta", group.file = group.file, tests = c("JV","JF","JD"))
+  out1 <- MAGEE.meta(meta.file.prefix, group.file = group.file, tests = c("JV","JF","JD"))
   print(out1)
-  unlink(paste0("MAGEE.meta.", c("score", "cov"), ".1"))
+  unlink(paste0(meta.file.prefix, c("score", "cov"), ".1"))
 }
 }
 \keyword{ variant set-based test }

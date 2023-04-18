@@ -90,7 +90,8 @@
 ## geno.file <- system.file("extdata", "geno.gds", package = "MAGEE")
 ## group.file <- system.file("extdata", "SetID.withweights.txt", 
 ##                           package = "MAGEE")
-## MAGEE.meta(meta.files.prefix = "MAGEE.meta",  
+## meta.files.prefix <- tempfile()
+## MAGEE.meta(meta.files.prefix = meta.files.prefix,  
 ##                    group.file=group.file,
 ##                     tests=c("JV", "JF", "JD"))
 
