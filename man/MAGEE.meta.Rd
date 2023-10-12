@@ -95,7 +95,9 @@ Xinyu Wang, Han Chen, Duy Pham
 }
 \examples{
 \donttest{
-library(GMMAT)
+if(requireNamespace("SeqArray", quietly = TRUE) && requireNamespace("SeqVarTools",
+  quietly = TRUE)) {
+  library(GMMAT)
   data(example)
   attach(example)
   model0 <- glmmkin(disease ~ age + sex, data = pheno, kins = GRM,
@@ -110,7 +112,8 @@ library(GMMAT)
   print(out)
   out1 <- MAGEE.meta(meta.file.prefix, group.file = group.file, tests = c("JV","JF","JD"))
   print(out1)
-  unlink(paste0(meta.file.prefix, c("score", "cov"), ".1"))
+  unlink(paste0(meta.file.prefix, c(".score", ".cov"), ".1"))
+}
 }
 }
 \keyword{ variant set-based test }
