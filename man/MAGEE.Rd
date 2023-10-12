@@ -155,16 +155,19 @@ Xinyu Wang, Han Chen, Duy Pham
 }
 \examples{
 \donttest{
-library(GMMAT)
-    data(example)
-    attach(example)
-    model0 <- glmmkin(disease ~ age + sex, data = pheno, kins = GRM,
+if(requireNamespace("SeqArray", quietly = TRUE) && requireNamespace("SeqVarTools",
+  quietly = TRUE)) {
+  library(GMMAT)
+  data(example)
+  attach(example)
+  model0 <- glmmkin(disease ~ age + sex, data = pheno, kins = GRM,
     id = "id", family = binomial(link = "logit"))
-    geno.file <- system.file("extdata", "geno.gds", package = "MAGEE")
-    group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
-    out <- MAGEE(model0, interaction='sex', geno.file, group.file, group.file.sep = "\t",
-                 tests=c("JV", "JF", "JD"))
-    print(out)
+  geno.file <- system.file("extdata", "geno.gds", package = "MAGEE")
+  group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
+  out <- MAGEE(model0, interaction='sex', geno.file, group.file, group.file.sep = "\t",
+    tests=c("JV", "JF", "JD"))
+  print(out)
+}
 }
 }
 \keyword{ variant set-based test }

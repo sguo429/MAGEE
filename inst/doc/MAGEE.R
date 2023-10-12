@@ -63,7 +63,6 @@
 ###################################################
 ### code chunk number 8: MAGEEgeigds (eval = FALSE)
 ###################################################
-## outfile <- tempfile()
 ## infile1 <- system.file("extdata", "meta1.txt", package = "MAGEE")
 ## infile2 <- system.file("extdata", "meta2.txt", package = "MAGEE")
 ## infile3 <- system.file("extdata", "meta3.txt", package = "MAGEE")

@@ -1,5 +1,6 @@
 test_that("cross-sectional gaussian", {
-  
+  skip_if_not_installed("SeqArray")
+  skip_if_not_installed("SeqVarTools")
   gdsfile  <- system.file("extdata", "geno.gds",  package = "MAGEE")
   bgenfile <- system.file("extdata", "geno.bgen", package = "MAGEE")
   samplefile <- system.file("extdata", "geno.sample", package = "MAGEE")
@@ -526,6 +527,8 @@ test_that("cross-sectional gaussian", {
 
 test_that("cross-sectional binomial", {
   skip_on_cran()
+  skip_if_not_installed("SeqArray")
+  skip_if_not_installed("SeqVarTools")
   gdsfile  <- system.file("extdata", "geno.gds",  package = "MAGEE")
   bgenfile <- system.file("extdata", "geno.bgen", package = "MAGEE")
   samplefile <- system.file("extdata", "geno.sample", package = "MAGEE")
@@ -1051,6 +1054,8 @@ test_that("cross-sectional binomial", {
 
 test_that("longitudinal random time trend gaussian", {
   skip_on_cran()
+  skip_if_not_installed("SeqArray")
+  skip_if_not_installed("SeqVarTools")
   gdsfile  <- system.file("extdata", "geno.gds",  package = "MAGEE")
   bgenfile <- system.file("extdata", "geno.bgen", package = "MAGEE")
   samplefile <- system.file("extdata", "geno.sample", package = "MAGEE")

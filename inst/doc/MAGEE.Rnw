@@ -38,8 +38,8 @@ morekeywords={}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
-\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.3.0}
-\date{April 18, 2023}
+\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.3.1}
+\date{October 12, 2023}
 \author{Xinyu Wang\\Human Genetics Center\\Dept. of Biostatistics and Data Science\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Xinyu.Wang@uth.tmc.edu\\\\Han Chen\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\Center for Precision Health\\School of Biomedical Informatics\\The University of Texas Health Science Center at Houston\\Email: Han.Chen.2@uth.tmc.edu\\\\Duy Pham\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: duy.t.pham@uth.tmc.edu\\\\Kenneth Westerman\\Department of Medicine\\Clinical and Translational Epidemiology Unit\\Mongan Institute\\Massachusetts General Hospital\\Email: KEWESTERMAN@mgh.harvard.edu\\\\Cong Pan\\Human Genetics Center\\Dept. of Epidemiology, Human Genetics and Environmental Sciences\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: cong.pan@uth.tmc.edu} 
 
 \maketitle
@@ -82,7 +82,7 @@ Note: The main effect variance component test (MV) in \textit{MAGEE} is the same
 \textit{MAGEE} is an open source project and is freely available for download at \url{https://github.com/xwang21/MAGEE}. It can also be found as a regular R package and downloaded from CRAN (\url{https://CRAN.R-project.org/package=MAGEE}).
 
 \subsection{Installing \textit{MAGEE}}
-The following R packages are required before installing \textit{MAGEE}: \href{https://cran.r-project.org/web/packages/Rcpp/index.html}{Rcpp} and \href{https://cran.r-project.org/web/packages/RcppArmadillo/index.html}{RcppArmadillo} for R and C++ integration and \href{https://cran.r-project.org/web/packages/testthat/index.html}{testthat} to run code checks during development. Additionally, \textit{MAGEE} imports from \href{https://cran.r-project.org/web/packages/Rcpp/index.html}{Rcpp}, \href{https://cran.r-project.org/web/packages/CompQuadForm/index.html}{CompQuadForm}, \href{https://cran.r-project.org/web/packages/foreach/index.html}{foreach}, \href{https://cran.r-project.org/web/views/HighPerformanceComputing.html}{parallel}, \href{https://cran.r-project.org/web/packages/Matrix/index.html}{Matrix}, methods, \href{https://cran.r-project.org/web/packages/GMMAT/index.html}{GMMAT}, \href{https://cran.r-project.org/web/packages/data.table/index.html}{data.table}, and Bioconductor packages \href{http://bioconductor.org/packages/release/bioc/html/SeqArray.html}{SeqArray} and \href{http://bioconductor.org/packages/release/bioc/html/SeqVarTools.html}{SeqVarTools}. The R package \href{https://cran.r-project.org/web/packages/doMC/index.html}{doMC} is required to run parallel computing in \textbf{glmm.gei} and \textbf{MAGEE} (\href{https://cran.r-project.org/web/packages/doMC/index.html}{doMC} is not available on Windows and these functions will switch to a single compute thread). 
+\textit{MAGEE} links to R packages \href{https://cran.r-project.org/web/packages/Rcpp/index.html}{Rcpp} and \href{https://cran.r-project.org/web/packages/RcppArmadillo/index.html}{RcppArmadillo}, and also imports R packages \href{https://cran.r-project.org/web/packages/Rcpp/index.html}{Rcpp}, \href{https://cran.r-project.org/web/packages/CompQuadForm/index.html}{CompQuadForm}, \href{https://cran.r-project.org/web/packages/foreach/index.html}{foreach}, \href{https://cran.r-project.org/web/views/HighPerformanceComputing.html}{parallel}, \href{https://cran.r-project.org/web/packages/Matrix/index.html}{Matrix}, methods, \href{https://cran.r-project.org/web/packages/GMMAT/index.html}{GMMAT}, \href{https://cran.r-project.org/web/packages/data.table/index.html}{data.table}. \textit{MAGEE} requires Bioconductor packages \href{http://bioconductor.org/packages/release/bioc/html/SeqArray.html}{SeqArray} and \href{http://bioconductor.org/packages/release/bioc/html/SeqVarTools.html}{SeqVarTools} to work with genotype files in the GDS format. In addition, \textit{GMMAT} requires \href{https://cran.r-project.org/web/packages/testthat/index.html}{testthat} to run code checks during development, and \href{https://cran.r-project.org/web/packages/doMC/index.html}{doMC} to run parallel computing in \textbf{glmm.gei} and \textbf{MAGEE} for genotype files in the GDS format (however, \href{https://cran.r-project.org/web/packages/doMC/index.html}{doMC} is not available on Windows and these functions will switch to a single thread). These dependencies should be installed before installing \textit{MAGEE}.
 
 For optimal computational performance, it is recommended to use an R version configured with the Intel Math Kernel Library (or other fast BLAS/LAPACK libraries). See the instructions on building R with Intel MKL (\url{https://software.intel.com/en-us/articles/using-intel-mkl-with-r}).
 
@@ -168,7 +168,6 @@ glmm.gei(model0, interaction='sex', geno.file = infile,
 The function \textbf{glmm.gei} returns no value for GDS and BGEN genotype files.
 \subsubsection{meta-analysis}
 <<MAGEEgeigds, eval=FALSE, echo=TRUE>>=
-outfile <- tempfile()
 infile1 <- system.file("extdata", "meta1.txt", package = "MAGEE")
 infile2 <- system.file("extdata", "meta2.txt", package = "MAGEE")
 infile3 <- system.file("extdata", "meta3.txt", package = "MAGEE")
@@ -473,6 +472,11 @@ Initial public release of \textit{MAGEE}.
 \item Removed \textbf{context} in testthat tests.
 \item Replaced \textbf{print} and \textbf{cat} in the code by \textbf{message} and \textbf{warning}.
 \item Minor changes in the man directory, per CRAN policy.
+\end{enumerate}
+
+\subsection{Version 1.3.1 (October 12, 2023)}
+\begin{enumerate}
+\item Bioconductor packages \textbf{SeqArray} and \textbf{SeqVarTools} moved to Suggests.
 \end{enumerate}
 
 \section{Contact}
