@@ -1,4 +1,6 @@
 test_that("cross-sectional id le 400 binomial", {
+  skip_if_not_installed("SeqArray")
+  skip_if_not_installed("SeqVarTools")
   gdsfile  <- system.file("extdata", "geno.gds",  package = "MAGEE")
   group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
   data(example)
@@ -40,6 +42,8 @@ test_that("cross-sectional id le 400 binomial", {
 
 test_that("cross-sectional id gt 400 binomial", {
   skip_on_cran()
+  skip_if_not_installed("SeqArray")
+  skip_if_not_installed("SeqVarTools")
   gdsfile  <- system.file("extdata", "geno.gds",  package = "MAGEE")
   group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
   data(example)
@@ -70,6 +74,8 @@ test_that("cross-sectional id gt 400 binomial", {
 
 test_that("cross-sectional id le 400 gaussian", {
   skip_on_cran()
+  skip_if_not_installed("SeqArray")
+  skip_if_not_installed("SeqVarTools")
   gdsfile  <- system.file("extdata", "geno.gds",  package = "MAGEE")
   group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
   data(example)
@@ -98,6 +104,8 @@ test_that("cross-sectional id le 400 gaussian", {
 
 test_that("cross-sectional id gt 400 gaussian", {
   skip_on_cran()
+  skip_if_not_installed("SeqArray")
+  skip_if_not_installed("SeqVarTools")
   gdsfile  <- system.file("extdata", "geno.gds",  package = "MAGEE")
   group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
   data(example)
@@ -127,7 +135,8 @@ test_that("cross-sectional id gt 400 gaussian", {
 
 test_that("longitudinal repeated measures gaussian", {
   skip_on_cran()
-  
+  skip_if_not_installed("SeqArray")
+  skip_if_not_installed("SeqVarTools")
   gdsfile <- system.file("extdata", "geno.gds", package = "MAGEE")
   group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
   data(example)
@@ -149,7 +158,8 @@ test_that("longitudinal repeated measures gaussian", {
 
 test_that("longitudinal random time trend gaussian", {
   skip_on_cran()
-  
+  skip_if_not_installed("SeqArray")
+  skip_if_not_installed("SeqVarTools")
   gdsfile <- system.file("extdata", "geno.gds", package = "MAGEE")
   group.file <- system.file("extdata", "SetID.withweights.txt", package = "MAGEE")
   data(example)

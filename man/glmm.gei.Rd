@@ -73,17 +73,19 @@ Xinyu Wang, Han Chen, Duy Pham
   model0 <- glmmkin(disease ~ age + sex, data = pheno, kins = GRM,
                     id = "id", family = binomial(link = "logit"))
                    
-  infile <- system.file("extdata", "geno.gds", package = "MAGEE")
-  gds_outfile <- tempfile()
-  glmm.gei(model0, interaction='sex', geno.file = infile, outfile = gds_outfile)
-  
+  if(requireNamespace("SeqArray", quietly = TRUE) && requireNamespace("SeqVarTools",
+    quietly = TRUE)) {
+    infile <- system.file("extdata", "geno.gds", package = "MAGEE")
+    gds_outfile <- tempfile()
+    glmm.gei(model0, interaction='sex', geno.file = infile, outfile = gds_outfile)
+    unlink(gds_outfile)
+  }
   infile <- system.file("extdata", "geno.bgen", package = "MAGEE")
   samplefile <- system.file("extdata", "geno.sample", package = "MAGEE")
   bgen_outfile <- tempfile()
   glmm.gei(model0, interaction='sex', geno.file = infile, outfile = bgen_outfile,
            bgen.samplefile = samplefile)
-  
-  unlink(c(bgen_outfile, gds_outfile))
+  unlink(bgen_outfile)
 }
 \keyword{ generalized linear mixed model }
 \keyword{ gene-environment interaction }
