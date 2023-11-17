@@ -149,7 +149,7 @@ MAGEE.meta <- function(meta.files.prefix, n.files = rep(1, length(meta.files.pre
           IDX3 <- IDX3+n.p*n.E*(cohort.group.idx[j]-1)
         }
         U[IDX] <- U[IDX]+U.list[[j]]$G.SCORE[IDX2]
-        SK[IDX3] <- SK[IDX3]+as.vector(U.list[[j]][, paste("K.SCORE.", 1:n.E, sep="")])[IDX4]
+        SK[IDX3] <- SK[IDX3]+as.vector(as.matrix(U.list[[j]][, paste("K.SCORE.", 1:n.E, sep="")]))[IDX4]
         V[IDX, IDX] <- V[IDX,IDX]+V.list[[j]][IDX2,IDX2]
         KPG[IDX3,IDX] <- KPG[IDX3,IDX]+KPG.list[[j]][IDX4,IDX2]
         KPK[IDX3,IDX3] <- KPK[IDX3,IDX3]+KPK.list[[j]][IDX4,IDX4]
