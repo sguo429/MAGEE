@@ -8,7 +8,8 @@ Use a glmmkin class object from the null GLMM to perform single variant main eff
 }
 \usage{
 glmm.gei(null.obj, interaction, geno.file, outfile, bgen.samplefile = NULL, 
-  interaction.covariates = NULL,  meta.output = FALSE, center=TRUE, 
+  interaction.covariates = NULL,  meta.output = FALSE,
+  covar.center="interaction.covariates.only", geno.center=TRUE, 
   MAF.range = c(1e-7, 0.5), miss.cutoff = 1, missing.method = "impute2mean", 
   nperbatch=100, ncores = 1, verbose = FALSE)
 }
@@ -34,7 +35,10 @@ a numeric or a character vector indicating the interaction covariates. If a nume
 \item{meta.output}{
 boolean value to modiy the output file.If TRUE, the GxE effect estimate and variance and covariance associated with the effect estimate are included in the output file. (default = FALSE)
 }
-  \item{center}{
+  \item{covar.center}{
+a character value for the centering option for covariates. Possible values are "none", "all", or "interaction.covariates.only". Generally, centering exposures and covariates to have mean 0 before creating interaction terms would make the genetic main effect easier to interpret. However, if a subsequent meta-analysis is expected, then the exposures of interest should not be centered because in that case the genetic main effect may have different interpretations across studies (default = "interaction.covariates.only").
+}
+  \item{geno.center}{
 a logical switch for centering genotypes before tests. If TRUE, genotypes will be centered to have mean 0 before tests, otherwise raw values will be directly used in tests (default = TRUE).
 }
   \item{MAF.range}{

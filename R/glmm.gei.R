@@ -1,4 +1,4 @@
-glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=NULL, interaction.covariates=NULL, meta.output=FALSE, center=TRUE, MAF.range = c(1e-7, 0.5), miss.cutoff = 1, missing.method = "impute2mean", nperbatch=100, ncores = 1, verbose = FALSE){
+glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=NULL, interaction.covariates=NULL, meta.output=FALSE, covar.center="interaction.covariates.only", geno.center=TRUE, MAF.range = c(1e-7, 0.5), miss.cutoff = 1, missing.method = "impute2mean", nperbatch=100, ncores = 1, verbose = FALSE){
   if(Sys.info()["sysname"] == "Windows" && ncores > 1) {
     warning("The package doMC is not available on Windows... Switching to single thread...", call. = FALSE)
     ncores <- 1
@@ -8,7 +8,9 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
   if(!grepl("\\.gds$|\\.bgen$", geno.file[1])) stop("Error: only .gds and .bgen format is supported in geno.file!")
   if(!inherits(null.obj, c("glmmkin", "glmmkin.multi"))) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
   if(inherits(null.obj,"glmmkin.multi")) stop("Error: currently null.obj must be a class glmmkin object, glmmkin.multi not yet supported...")
-  n.pheno <- null.obj$n.pheno  
+  n.pheno <- null.obj$n.pheno
+  covar.center <- try(match.arg(covar.center, c("none", "all", "interaction.covariates.only")))
+  if(inherits(covar.center,"try-error")) stop("Error: \"covar.center\" must be one of the following: \"none\", \"all\", \"interaction.covariates.only\".")
   missing.method <- try(match.arg(missing.method, c("impute2mean", "omit")))
   if(inherits(missing.method,"try-error")) stop("Error: \"missing.method\" must be \"impute2mean\" or \"omit\".")
   if(!inherits(interaction, c("integer", "numeric", "character"))) stop("Error: \"interaction\" should be an integer, numeric, or character vector.")
@@ -63,15 +65,15 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
       null.obj$Sigma_iX <- null.obj$Sigma_iX[match.id, , drop = FALSE]
       null.obj$Sigma_i <- null.obj$Sigma_i[match.id, match.id]
     }
-    Ebin<-apply(as.matrix(E),2,function(x) length(unique(x))<=20)
-
-    if (any(Ebin)){
-      Ecat<-as.matrix(E[,Ebin])
+    
+    Ebin<-apply(as.matrix(E[!duplicated(null.obj$id_include),,drop=FALSE]),2,function(x) length(unique(x))<=20)
+    if(any(Ebin)){
+      Ecat<-as.matrix(E[!duplicated(null.obj$id_include),Ebin,drop=FALSE])
       strata <- apply(Ecat, 1, paste, collapse = "_")
       
       uni.strata<-unique(rev(strata))
       uni.strata<-sort(uni.strata)
-      cat_inter<-paste(interaction, collapse = '_')
+      cat_inter<-paste(interaction[Ebin], collapse = '_')
       tmp<-apply(as.matrix(uni.strata),1,function(x) paste(x, collapse = '_'))
       tmp1<-paste0(cat_inter,"_",tmp)
       tmp2<-c("N","AF")
@@ -79,10 +81,15 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
     }else {
       bin_header=NULL
     }
-    strata.cat<-apply(E,2,function(x) length(unique(x))<=20)
-    strata <- if (any(strata.cat))  as.numeric(as.factor(apply(as.matrix(E[,strata.cat]), 1, paste, collapse = "_"))) else NULL 
+    strata <- if(any(Ebin))  as.numeric(as.factor(apply(as.matrix(E[!duplicated(null.obj$id_include),Ebin,drop=FALSE]), 1, paste, collapse = "_"))) else NULL 
 
-    E <- scale(E, scale = FALSE)
+    if(covar.center == "all") {
+      E <- scale(E, scale = FALSE)
+    } else if(covar.center != "none") {
+      if(!is.null(interaction.covariates)) {
+        E <- cbind(E[,1:ei,drop=F], scale(E[,(1+ei):(qi+ei),drop=F], scale = FALSE))
+      }
+    }
     E <- cbind(1, E)
     ncolE <- ncol(E)
     if(!is.null(strata)) {
@@ -182,8 +189,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
             SeqArray::seqSetFilter(gds, variant.id = tmp2.variant.idx, verbose = FALSE)
             geno <- SeqVarTools::altDosage(gds, use.names = FALSE)
             ng <- ncol(geno)
-	          freq <- colMeans(geno, na.rm = TRUE)/2
-	          if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
+            freq <- colMeans(geno, na.rm = TRUE)/2
             N <- nrow(geno) - colSums(is.na(geno))
             if(!is.null(strata.list)) { # E is not continuous
               freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2)
@@ -203,11 +209,12 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
             if(length(miss.idx)>0) {
               geno[miss.idx] <- if(missing.method == "impute2mean") 2*freq[ceiling(miss.idx/nrow(geno))] else NA
             }
-            if(center) geno <- scale(geno, scale = FALSE)
+            if(geno.center) geno <- scale(geno, scale = FALSE)
             miss.idx <- which(is.na(geno))
             if(length(miss.idx)>0) { # omit
               geno[miss.idx] <- 0
             }
+            if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
             
             K <- do.call(cbind, sapply(1:ncolE, function(xx) geno*E[,xx], simplify = FALSE), envir = environment())
             
@@ -222,7 +229,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
             GPG <- as.matrix(crossprod(geno, PG)) * (matrix(1, 1, 1) %x% diag(ng))
             GPG_i <- try(solve(GPG), silent = TRUE)
             if(inherits(GPG_i, "try-error")) GPG_i <- MASS::ginv(GPG)
-            V_i <- diag(GPG_i)
+            V_i <- pmax(0,diag(GPG_i))
             
             BETA.MAIN <- V_i * U
             SE.MAIN   <- sqrt(V_i)
@@ -240,12 +247,12 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
             IV.V_i <- try(solve(KPK), silent = TRUE)
             if(inherits(IV.V_i, "try-error")) IV.V_i <- try(MASS::ginv(KPK), silent = TRUE)
             if (inherits(IV.V_i, "try-error")) {
-              fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
+              fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, geno.center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
               tmp_idx <<- fix_out[[1]]
               include <<- fix_out[[2]]
               return(fix_out[[3]])
             }
-            
+            diag(IV.V_i) <- pmax(0,diag(IV.V_i))
             IV.U <- (rep(1, ncolE) %x% diag(ng)) * as.vector(crossprod(K,residuals))
             BETA.INT <- crossprod(IV.V_i, IV.U)
             
@@ -255,7 +262,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
             IV.E_i <- try(solve(IV.V_i[ng1:ngei1, ng1:ngei1]), silent = TRUE)
             if(inherits(IV.E_i,"try-error")) IV.E_i <- try(MASS::ginv(IV.V_i[ng1:ngei1, ng1:ngei1]), silent = TRUE)
             if(inherits(IV.E_i, "try-error")) {
-              fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
+              fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, geno.center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
               tmp_idx <<- fix_out[[1]]
               include <<- fix_out[[2]]
               return(fix_out[[3]])
@@ -265,7 +272,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
             IV.GE_i <- try(solve(IV.V_i[1:ngei1, 1:ngei1]), silent = TRUE)
             if(inherits(IV.GE_i, "try-error")) IV.GE_i <- try(MASS::ginv(IV.V_i[1:ngei1, 1:ngei1]), silent = TRUE)
             if (inherits(IV.GE_i, "try-error")) {
-              fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
+              fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, geno.center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
               tmp_idx <<- fix_out[[1]]
               include <<- fix_out[[2]]
               return(fix_out[[3]])
@@ -454,9 +461,6 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           geno <- SeqVarTools::altDosage(gds, use.names = FALSE)
           ng <- ncol(geno)
           freq <- colMeans(geno, na.rm = TRUE)/2
-
-          if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
-
           N <- nrow(geno) - colSums(is.na(geno))
           if(!is.null(strata.list)) { # E is not continuous
             freq.tmp <- sapply(strata.list, function(x) colMeans(geno[x, , drop = FALSE], na.rm = TRUE)/2)
@@ -471,21 +475,19 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
             freq_N<-matrix(NA,nrow =rows.freq_N,ncol=cols.freq_N)
             freq_N[,seq(1,cols.freq_N,2)]<-n.tmp
             freq_N[,seq(2,cols.freq_N,2)]<-freq.tmp
-          }
-      
-          else {freq_N<-NA}
-          
+          } else {freq_N<-NA}
     
           miss.idx <- which(is.na(geno))
           if(length(miss.idx)>0) {
             geno[miss.idx] <- if(missing.method == "impute2mean") 2*freq[ceiling(miss.idx/nrow(geno))] else NA
           }
 
-          if(center) geno <- scale(geno, scale = FALSE)
+          if(geno.center) geno <- scale(geno, scale = FALSE)
           miss.idx <- which(is.na(geno))
           if(length(miss.idx)>0) { # omit
             geno[miss.idx] <- 0
           }
+          if(any(duplicated(null.obj$id_include))) geno <- crossprod(J, geno)
 
           K <- do.call(cbind, sapply(1:ncolE, function(xx) geno*E[,xx], simplify = FALSE), envir = environment())
           U <- as.vector(crossprod(geno, residuals))
@@ -501,7 +503,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           
           GPG_i <- try(solve(GPG), silent = TRUE)
           if(inherits(GPG_i, "try-error")) GPG_i <- MASS::ginv(GPG)
-          V_i <- diag(GPG_i)
+          V_i <- pmax(0,diag(GPG_i))
 
           BETA.MAIN <- V_i * U
           
@@ -523,12 +525,12 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
      
           if(inherits(IV.V_i, "try-error")) IV.V_i <- try(MASS::ginv(KPK), silent = TRUE)
           if (inherits(IV.V_i, "try-error")) {
-            fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
+            fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, geno.center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
             tmp_idx <<- fix_out[[1]]
             include <<- fix_out[[2]]
             return(fix_out[[3]])
           }
-
+	  diag(IV.V_i) <- pmax(0,diag(IV.V_i))
           IV.U <- (rep(1, ncolE) %x% diag(ng)) * as.vector(crossprod(K,residuals))
           
           BETA.INT <- crossprod(IV.V_i, IV.U)
@@ -540,7 +542,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           IV.E_i <- try(solve(IV.V_i[ng1:ngei1, ng1:ngei1]), silent = TRUE)
           if(inherits(IV.E_i, "try-error")) IV.E_i <- try(MASS::ginv(IV.V_i[ng1:ngei1, ng1:ngei1]), silent = TRUE)
           if(inherits(IV.E_i, "try-error")) {
-            fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
+            fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, geno.center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
             tmp_idx <<- fix_out[[1]]
             include <<- fix_out[[2]]
             return(fix_out[[3]])
@@ -550,7 +552,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           IV.GE_i <- try(solve(IV.V_i[1:ngei1, 1:ngei1]), silent = TRUE)
           if(inherits(IV.GE_i, "try-error")) IV.GE_i <- try(MASS::ginv(IV.V_i[1:ngei1, 1:ngei1]), silent = TRUE)
           if(inherits(IV.GE_i, "try-error")) {
-            fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
+            fix_out <- fix.dgesdd(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, geno.center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include)
             tmp_idx <<- fix_out[[1]]
             include <<- fix_out[[2]]
             return(fix_out[[3]])
@@ -647,17 +649,17 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
     
     bgenInfo <- .Call('bgenHeader', geno.file)
     
-    if (bgenInfo$SampleIdFlag == 0) {
-      if (is.null(bgen.samplefile)) {
-        stop("Error: bgen file does not contain sample identifiers. A .sample file (bgen.samplefile) is needed.")
-      }
+    if (is.null(bgen.samplefile) && bgenInfo$SampleIdFlag == 0) {
+      stop("Error: bgen file does not contain sample identifiers. A .sample file (bgen.samplefile) is needed.")
+    }
+    if(is.null(bgen.samplefile)) {
+      sample.id <- bgenInfo$SampleIds
+    } else {
       sample.id <- fread(bgen.samplefile, header = TRUE, data.table = FALSE)
       if ((nrow(sample.id)-1) != bgenInfo$N){
         stop(paste0("Error: Number of sample identifiers in BGEN sample file (", nrow(sample.id)-1, ") does not match number of samples in BGEN file (", bgenInfo$N,")."))
       }
       sample.id <- sample.id[-1, 2]
-    } else {
-      sample.id <- bgenInfo$SampleIds
     }
     
     if(any(is.na(match(null.obj$id_include, sample.id)))) warning("Check your data... Some individuals in null.obj$id_include are missing in sample.id of bgen sample file!", call. = FALSE)
@@ -678,14 +680,15 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
     }else match.id <- match(sample.id, null.obj$id_include)
 
     E <- as.matrix(E[match.id, , drop = FALSE])
-    Ebin<-apply(E,2,function(x) length(unique(x))<=20)
-    if (any(Ebin)){
-      Ecat<-as.matrix(E[,Ebin])
+    
+    Ebin<-apply(as.matrix(E[!duplicated(null.obj$id_include),,drop=FALSE]),2,function(x) length(unique(x))<=20)
+    if(any(Ebin)){
+      Ecat<-as.matrix(E[!duplicated(null.obj$id_include),Ebin,drop=FALSE])
       strata <- apply(Ecat, 1, paste, collapse = "_")
       
       uni.strata<-unique(rev(strata))
       uni.strata<-sort(uni.strata)
-      cat_inter<-paste(interaction, collapse = '_')
+      cat_inter<-paste(interaction[Ebin], collapse = '_')
       tmp<-apply(as.matrix(uni.strata),1,function(x) paste(x, collapse = '_'))
       tmp1<-paste0(cat_inter,"_",tmp)
       tmp2<-c("N","AF")
@@ -693,9 +696,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
     }else {
       bin_header=NULL
     }
-
-    strata.cat<-apply(E,2,function(x) length(unique(x))<=20)
-    strata <- if (any(strata.cat))  as.numeric(as.factor(apply(as.matrix(E[,strata.cat]), 1, paste, collapse = "_"))) else NULL 
+    strata <- if(any(Ebin))  as.numeric(as.factor(apply(as.matrix(E[!duplicated(null.obj$id_include),Ebin,drop=FALSE]), 1, paste, collapse = "_"))) else NULL 
     
     if(!is.null(strata)) {
       strata.list <- lapply(sort(unique(strata)), function(x) which(strata==x))
@@ -703,8 +704,13 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
       strata.list <- NULL
     }
     
-
-    E <- scale(E, scale = FALSE)
+    if(covar.center == "all") {
+      E <- scale(E, scale = FALSE)
+    } else if(covar.center != "none") {
+      if(!is.null(interaction.covariates)) {
+        E <- cbind(E[,1:ei,drop=F], scale(E[,(1+ei):(qi+ei),drop=F], scale = FALSE))
+      }
+    }
     residuals <- residuals[match.id]
     if(!is.null(null.obj$P)) {
       null.obj$P <- null.obj$P[match.id, match.id]
@@ -738,7 +744,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
     }
     
     threadInfo <- .Call("getVariantPos", geno.file, bgenInfo$offset, bgenInfo$M, bgenInfo$N, bgenInfo$CompressionFlag, bgenInfo$LayoutFlag, ncores)
-    center2 <- ifelse(center, 'c', 'n')
+    center2 <- ifelse(geno.center, 'c', 'n')
     missing.method <- substr(missing.method, 1, 1)
     
     if (ncores > 1) {
@@ -756,8 +762,11 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
         interaction2 <- c("G", paste0("G-", interaction))
         cov.header = matrix(paste(rep(paste0("Cov_Beta_", interaction2), each = ncolE), interaction2, sep = "_"), ncolE, ncolE)
         ss.header = c(paste0("Beta_", interaction2), paste0("SE_Beta_", interaction2), cov.header[lower.tri(cov.header)])
-        writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
-        
+	if(is.null(bin_header)) {
+          writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+	} else {
+          writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+        }
          } else {
         interaction2 <- paste0("G-", interaction[1:ei])
         if (ei != 1) {
@@ -766,8 +775,11 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
         } else {
           ss.header = c(paste0("Beta_", interaction2), paste0("SE_Beta_", interaction2))
         }
-        writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
-        
+	if(is.null(bin_header)) {
+          writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+        } else {
+          writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+	}
         }
     
       for(i in 1:ncores){
@@ -792,8 +804,11 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           interaction2 <- c("G", paste0("G-", interaction))
           cov.header = matrix(paste(rep(paste0("Cov_Beta_", interaction2), each = ncolE), interaction2, sep = "_"), ncolE, ncolE)
           ss.header = c(paste0("Beta_", interaction2), paste0("SE_Beta_", interaction2), cov.header[lower.tri(cov.header)])
-          writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
-
+	  if(is.null(bin_header)) {
+            writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+	  } else {
+            writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+	  }
           } else {
           interaction2 <- paste0("G-", interaction[1:ei])
           if (ei != 1) {
@@ -802,8 +817,11 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
           } else {
             ss.header = c(paste0("Beta_", interaction2), paste0("SE_Beta_", interaction2))
           }
-         writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
-          
+	  if(is.null(bin_header)) {
+            writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+          } else {
+            writeLines(paste0("SNPID\tRSID\tCHR\tPOS\tNon_Effect_Allele\tEffect_Allele\tN_Samples\tAF\t",paste0(bin_header, collapse = "\t"),"\tBeta_Marginal\tSE_Beta_Marginal\t",paste0(ss.header, collapse = "\t"),"\tP_Value_Marginal\tP_Value_Interaction\tP_Value_Joint\n"), outTmp)
+	  }
         }
       inTmp <- readLines(paste0(outfile, "_tmp"))
       writeLines(inTmp, outTmp)
@@ -815,7 +833,7 @@ glmm.gei <- function(null.obj, interaction, geno.file, outfile, bgen.samplefile=
 }
 
 
-fix.dgesdd <- function(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include) {
+fix.dgesdd <- function(gds, out, debug_file, null.obj, J, residuals, tmp2.variant.idx, meta.output, geno.center, missing.method, strata.list, ncolE, E, ei, bin_header, meta.header, totalCol, tmp_idx, include) {
   ei1 <- ei+1
   tmp_idx0 <- tmp_idx
   tmp.out <- lapply(tmp2.variant.idx, function(j) {
@@ -844,7 +862,7 @@ fix.dgesdd <- function(gds, out, debug_file, null.obj, J, residuals, tmp2.varian
     if(length(miss.idx)>0) {
       geno[miss.idx] <- if(missing.method == "impute2mean") 2*freq[ceiling(miss.idx/nrow(geno))] else NA
     }
-    if(center) geno <- scale(geno, scale = FALSE)
+    if(geno.center) geno <- scale(geno, scale = FALSE)
     miss.idx <- which(is.na(geno))
     if(length(miss.idx)>0) { # omit
       geno[miss.idx] <- 0
@@ -863,7 +881,7 @@ fix.dgesdd <- function(gds, out, debug_file, null.obj, J, residuals, tmp2.varian
     GPG <- as.matrix(crossprod(geno, PG)) * (matrix(1, 1, 1) %x% diag(ng))
     GPG_i <- try(solve(GPG), silent = TRUE)
     if(inherits(GPG_i, "try-error")) GPG_i <- MASS::ginv(GPG)
-    V_i <- diag(GPG_i)
+    V_i <- pmax(0,diag(GPG_i))
     
     BETA.MAIN <- V_i * U
     SE.MAIN   <- sqrt(V_i)
@@ -889,7 +907,7 @@ fix.dgesdd <- function(gds, out, debug_file, null.obj, J, residuals, tmp2.varian
       tmp_idx <<- tmp_idx + 1
       return(NULL)
     }
-    
+    diag(IV.V_i) <- pmax(0,diag(IV.V_i))
     IV.U <- (rep(1, ncolE) %x% diag(ng)) * as.vector(crossprod(K,residuals))
     BETA.INT <- crossprod(IV.V_i, IV.U)
     
