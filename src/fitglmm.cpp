@@ -48,7 +48,7 @@ extern "C"
 {
   
     
-  SEXP glmm_gei_bgen13( SEXP dupe_flag, SEXP res_in, SEXP nullObj_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP missrate_in, SEXP miss_method_in, SEXP nperbatch_in, 
+  SEXP glmm_gei_bgen13( SEXP dupe_flag, SEXP res_in, SEXP nullObj_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP minmac_in, SEXP missrate_in, SEXP minrsq_in, SEXP miss_method_in, SEXP nperbatch_in, 
                        SEXP ei_in, SEXP qi_in, SEXP isNullP_in, /*SEXP isNullEC_in,*/ SEXP strata_in,
                        SEXP select_in, SEXP begin_in, SEXP end_in, SEXP pos_in, SEXP nbgen_in, SEXP compression_in, SEXP metaOutput_in) {
     try{
@@ -72,11 +72,6 @@ extern "C"
         strataList_size = strata_list.size();
       }
 
-      if (!isDupeID)
-      {
-        J = as<arma::sp_mat>(null_obj["J"]);
-      }
-      
       arma::mat E = as<arma::mat>(null_obj["E"]);
       arma::mat EC;
       
@@ -97,6 +92,8 @@ extern "C"
       const double minmaf = Rcpp::as<double>(minmaf_in);
       const double maxmaf = Rcpp::as<double>(maxmaf_in);
       const double missrate = Rcpp::as<double>(missrate_in);
+      const double minmac = Rcpp::as<double>(minmac_in);
+      const double minrsq = Rcpp::as<double>(minrsq_in);
       const char miss_method = Rcpp::as<char>(miss_method_in);
       const bool metaOutput = Rcpp::as<bool>(metaOutput_in);
       string bgenfile = Rcpp::as<string>(bgenfile_in);
@@ -106,12 +103,19 @@ extern "C"
 
       string line, snp;
       size_t n = res.n_elem;
-      vec g(n);      
+      size_t n_obs = res.n_elem;
+      if (!isDupeID)
+      {
+        J = as<arma::sp_mat>(null_obj["J"]);
+	n = J.n_rows;
+      }
+ 
+      vec g(n);
       uvec gmiss(n), snp_skip = zeros<uvec>(npb);
-      mat G(n, npb);
+      mat G(n_obs, npb);
       string* tmpout = new string[npb];
       vector <string> biminfo;
-      double gmean, geno, gmax, gmin;
+      double gmean, mac, gsqmean, geno, gmax, gmin, rsq;
       size_t ncount, nmiss, npbidx = 0;
       double compute_time = 0.0;
       ofstream writefile(outfile.c_str(), std::ofstream::binary);
@@ -236,8 +240,11 @@ extern "C"
         const uintptr_t probs_offset = B / 8;
         
         gmean=0.0;
+	mac=0.0;
+	gsqmean=0.0;
         gmax=-100.0;
         gmin=100.0;
+	rsq=0.0;
         nmiss=0;
         ncount = 0;
 
@@ -253,8 +260,10 @@ extern "C"
                       
             } else if (missing_and_ploidy == 130){
               probs_start += (probs_offset * 2);
-              gmiss[select[ncount]-1] = 1;
-              nmiss++;
+	      if (select[ncount] > 0){
+                gmiss[select[ncount]-1] = 1;
+                nmiss++;
+	      }
               ncount++;
               continue;
             
@@ -270,6 +279,7 @@ extern "C"
               g[select[ncount]-1] = geno;
               g2[select[ncount]-1] = geno;
               gmean += geno;
+	      gsqmean += geno * geno;
               if (geno > gmax) { gmax = geno; }
               if (geno < gmin) { gmin = geno; }
             } 
@@ -287,8 +297,10 @@ extern "C"
              
            } else if (missing_and_ploidy == 130){
              probs_start += (probs_offset * 2);
-             gmiss[select[ncount]-1] = 1;
-             nmiss++;
+	     if (select[ncount] > 0){
+               gmiss[select[ncount]-1] = 1;
+               nmiss++;
+	     }
              ncount++;
              continue;
              
@@ -304,83 +316,26 @@ extern "C"
              g[select[ncount]-1] = geno;
              g2[select[ncount]-1] = geno;
              gmean += geno;
+	     gsqmean += geno * geno;
              if (geno > gmax) { gmax = geno; }
              if (geno < gmin) { gmin = geno; }
            } 
            ncount++;           
          }
        }
-      
-          double gmean2=gmean;
+	  mac = gmean;
+	  if((double)(n-nmiss)<mac) {
+	    mac = (double)(n-nmiss) * 2.0 - mac;
+	  }
           gmean/=(double)(n-nmiss);                                
+	  gsqmean/=(double)(n-nmiss);
+	  rsq = (gsqmean - gmean * gmean) * (double)(n-nmiss) / (double)(n-nmiss-1) / (gmean * (1.0 - gmean/2.0));
           double missRate = nmiss / (double)(n * 1.0);
 
-          if (!isDupeID){
-            gmean2 = gmean2/(N-nmiss);         
-            vec gJ=J.t()*g.rows(0,N-1);
-            vec gJ_origin=gJ;
-            vec gmissJ=J.t()*gmiss.rows(0,N-1);
-            int tmp_miss_count=0;
-
-            for (size_t j=0; j<n; j++) {
-              if (gmissJ[j]==1) {
-              tmp_miss_count=tmp_miss_count+1;
-              gJ[j] = gmean2;
-              if (center=='n' && miss_method=='o') {gJ[j] = 0.0;} // remove missing genotypes
-              }
-            } 
-
-            if (skip_strata) {
-              writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << "NA\tNA\t";
-            } else {
-                writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-tmp_miss_count) << "\t" << gmean2/2.0 << "\t" ;
-                std::vector<double> strata_range(strataList_size);
-                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
-                      uvec strata_tmp = as<arma::uvec>(strata_list[strata_idx]);
-                      vec strata_gmiss = gmissJ.elem(strata_tmp-1);
-                      vec strata_g = gJ_origin.elem(strata_tmp-1);
-                      strata_AF(m,strata_idx) = mean(strata_g.elem(find(strata_gmiss == 0))) / 2.0;
-                      vec tmp;
-                      tmp= strata_g.elem(find(strata_gmiss == 0));
-                      strata_N(m,strata_idx) =tmp.n_elem;            
-                  }
-                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
-                      writeout << strata_N(m,strata_idx) << "\t";
-                      writeout << strata_AF(m,strata_idx) << "\t";
-                  }
-          
-              }  
-                     
-         double colsum_gJ=0;
-         for (size_t j=0; j<n; j++) {
-            if (gmissJ[j]==0) {
-            colsum_gJ=colsum_gJ+gJ[j];
-           }
-           
-         }
-
-           
-         for (size_t j=0; j<n; j++) {
-            if (center=='c') {
-             gJ[j] -= colsum_gJ/(n-tmp_miss_count);
-            }
-          }
-          
-          double AF = gmean2/2.0;
-          if(((double)tmp_miss_count/n>missrate) || ((AF<minmaf || AF>maxmaf) && (AF<1-maxmaf || AF>1-minmaf))) { // monomorphic, missrate, MAF
-            snp_skip[npbidx] = 1;       
-          } 
-          else {
-              G.col(npbidx) = gJ;
-          }
-                                  
-        }
-        
-        else  {
            if (skip_strata) {
-              writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << "NA\tNA\t";
+	     writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t"<< gmean/2.0 << "\t" << mac << "\t" << rsq << "\t";
             } else {
-                writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << gmean/2.0 << "\t" ;
+                writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << gmean/2.0 << "\t" << mac << "\t" << rsq << "\t";
                 std::vector<double> strata_range(strataList_size);
                 for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
                       uvec strata_tmp = as<arma::uvec>(strata_list[strata_idx]);
@@ -408,13 +363,16 @@ extern "C"
             }
           }
           double AF= gmean / 2.0; // convert mean to allele freq
-          if(((double)nmiss/n>missrate) || ((AF<minmaf || AF>maxmaf) && (AF<1-maxmaf || AF>1-minmaf))) { // monomorphic, missrate, MAF
+          if(((double)nmiss/n>missrate) || (mac<minmac) || (rsq<minrsq) || ((AF<minmaf || AF>maxmaf) && (AF<1-maxmaf || AF>1-minmaf))) { // monomorphic, missrate, MAF, MAC, Rsq
             snp_skip[npbidx] = 1;            
           } 
           else {
-            G.col(npbidx) = g;
+	    if (!isDupeID){
+	      G.col(npbidx) = J.t()*g;
+	    } else {
+	      G.col(npbidx) = g;
+            }
           }
-         }
         
         tmpout[npbidx] = writeout.str();
         writeout.clear();
@@ -423,7 +381,7 @@ extern "C"
 
         if((m+1 == end) || (npbidx == npb)) {        
          if (npbidx != npb) {
-           G.reshape(n, npbidx);
+           G.reshape(n_obs, npbidx);
            snp_skip = snp_skip.rows(0,npbidx-1);
          }
 
@@ -581,10 +539,14 @@ extern "C"
          int ng_j = 0;
          for(size_t j=0; j<npbidx; ++j) {
            if(snp_skip[j] == 1) { // monomorphic, missrate, MAF
-             writefile << tmpout[j] << "NA\tNA\tNA\tNA\tNA\tNA";             
+             writefile << tmpout[j] << "NA\tNA\tNA\tNA\tNA\tNA\tNA";             
              if (metaOutput) {
-               for (int e=0; e < (ei+qi + ei+qi + ((ei+qi) * (ei+qi - 1) / 2)); e++) {
-                 writefile << "\tNA";
+               for (int e=0; e < (ei+qi + ei+qi + ((ei+qi) * (ei+qi + 1) / 2)); e++) {
+		 //if(e == 0) {
+		 //writefile << "NA";
+		 //} else {
+		   writefile << "\tNA";
+		   //}
                } 
              }
              writefile << "\n";
@@ -700,7 +662,7 @@ extern "C"
          }
             npbidx = 0;
             snp_skip.zeros();
-            G.reshape(n, npb);   
+            G.reshape(n_obs, npb);   
         }
             if((m+1) % 100000 == 0) {writefile << flush;}        
       }
@@ -728,7 +690,7 @@ extern "C"
      return R_NilValue;
 }  
   
-  SEXP glmm_gei_bgen11(SEXP dupe_flag, SEXP res_in, SEXP nullObj_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP missrate_in, SEXP miss_method_in, SEXP nperbatch_in, 
+  SEXP glmm_gei_bgen11(SEXP dupe_flag, SEXP res_in, SEXP nullObj_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP minmac_in, SEXP missrate_in, SEXP minrsq_in, SEXP miss_method_in, SEXP nperbatch_in, 
                        SEXP ei_in, SEXP qi_in, SEXP isNullP_in,  SEXP strata_in,
                        SEXP select_in, SEXP begin_in, SEXP end_in, SEXP pos_in, SEXP nbgen_in, SEXP compression_in, SEXP metaOutput_in) {
     try{
@@ -753,11 +715,6 @@ extern "C"
         strataList_size = strata_list.size();
       }
       
-      if (!isDupeID)
-      {
-        J = as<arma::sp_mat>(null_obj["J"]);
-      }
- 
       arma::mat E = as<arma::mat>(null_obj["E"]);
       arma::mat EC;
       
@@ -777,6 +734,8 @@ extern "C"
       const double minmaf = Rcpp::as<double>(minmaf_in);
       const double maxmaf = Rcpp::as<double>(maxmaf_in);
       const double missrate = Rcpp::as<double>(missrate_in);
+      const double minmac = Rcpp::as<double>(minmac_in);
+      const double minrsq = Rcpp::as<double>(minrsq_in);
       const char miss_method = Rcpp::as<char>(miss_method_in);
       const bool metaOutput = Rcpp::as<bool>(metaOutput_in);
       string bgenfile = Rcpp::as<string>(bgenfile_in);
@@ -786,12 +745,19 @@ extern "C"
       Rcpp::IntegerVector select(select_in);
       string line, snp;
       size_t n = res.n_elem;
+      size_t n_obs = res.n_elem;
+      if (!isDupeID)
+      {
+        J = as<arma::sp_mat>(null_obj["J"]);
+	n = J.n_rows;
+      }
+ 
       vec g(n);
       uvec gmiss(n), snp_skip = zeros<uvec>(npb);
-      mat G(n, npb);
+      mat G(n_obs, npb);
       string* tmpout = new string[npb];
       vector <string> biminfo;
-      double gmean, geno, gmax, gmin;
+      double gmean, mac, gsqmean, geno, gmax, gmin, rsq;
       size_t ncount, nmiss, npbidx = 0;
       double compute_time = 0.0;
       ofstream writefile(outfile.c_str(), std::ofstream::binary);
@@ -872,8 +838,11 @@ extern "C"
         
         const double scale = 1.0 / 32768;        
         gmean=0.0;
+	mac=0.0;
+	gsqmean=0.0;
         gmax=-100.0;
         gmin=100.0;
+	rsq=0.0;
         nmiss=0;
         ncount = 0;
         for (size_t i = 0; i < Nbgen; i++) {
@@ -890,6 +859,7 @@ extern "C"
               gmiss[select[ncount]-1] = 0;
               g[select[ncount]-1] = geno;
               gmean += geno;
+	      gsqmean += geno * geno;
               if (geno > gmax) { gmax = geno; }
               if (geno < gmin) { gmin = geno; }
             }             
@@ -897,73 +867,19 @@ extern "C"
           ncount++;
         }
         
-        double gmean2=gmean;
+	mac = gmean;
+	if((double)(n-nmiss)<mac) {
+	  mac = (double)(n-nmiss) * 2.0 - mac;
+	}
         gmean/=(double)(n-nmiss);
+	gsqmean/=(double)(n-nmiss);
+	rsq = (gsqmean - gmean * gmean) * (double)(n-nmiss) / (double)(n-nmiss-1) / (gmean * (1.0 - gmean/2.0));
         double missRate = nmiss / (double)(n * 1.0);
      
-        if (!isDupeID){
-         gmean2 = gmean2/(Nbgen-nmiss);
-         vec gJ=J.t()*g.rows(0,Nbgen-1);
-         vec gJ_origin=gJ;
-         vec gmissJ=J.t()*gmiss.rows(0,Nbgen-1);
-
-         int tmp_miss_count=0;
-         for (size_t j=0; j<n; j++) {
-           if (gmissJ[j]==1) {
-            tmp_miss_count=tmp_miss_count+1;
-            gJ[j] = gmean2;
-            if (center=='n' && miss_method=='o') {gJ[j] = 0.0;} // remove missing genotypes
-           }
-         } 
-         if (skip_strata) {
-              writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << "NA\tNA\t";
-            } else {
-                writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-tmp_miss_count) << "\t" << gmean2/2.0 << "\t" ;
-                std::vector<double> strata_range(strataList_size);
-                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
-                      uvec strata_tmp = as<arma::uvec>(strata_list[strata_idx]);
-                      vec strata_gmiss = gmissJ.elem(strata_tmp-1);
-                      vec strata_g = gJ_origin.elem(strata_tmp-1);
-                      strata_AF(m,strata_idx) = mean(strata_g.elem(find(strata_gmiss == 0))) / 2.0;
-                      vec tmp;
-                      tmp= strata_g.elem(find(strata_gmiss == 0));
-                      strata_N(m,strata_idx) =tmp.n_elem;            
-                  }
-                for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
-                      writeout << strata_N(m,strata_idx) << "\t";
-                      writeout << strata_AF(m,strata_idx) << "\t";
-                  }
-          
-              }  
-                     
-         double colsum_gJ=0;
-         for (size_t j=0; j<n; j++) {
-            if (gmissJ[j]==0) {
-                colsum_gJ=colsum_gJ+gJ[j];
-           }           
-         }
-
-        for (size_t j=0; j<n; j++) {
-            if (center=='c') {
-             gJ[j] -= colsum_gJ/(n-tmp_miss_count);
-            }
-          }
-
-        double AF = gmean2/2.0;
-
-        if(((double)tmp_miss_count/n>missrate) || ((AF<minmaf || AF>maxmaf) && (AF<1-maxmaf || AF>1-minmaf))) { // monomorphic, missrate, MAF
-            snp_skip[npbidx] = 1;      
-        }
-        else {
-              G.col(npbidx) = gJ;
-        }
-                                  
-    }
-         else  {
            if (skip_strata) {
-              writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << missRate << "\t"<< gmean/2.0 << "\t" << "NA\tNA\t";
+              writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t"<< gmean/2.0 << "\t" << mac << "\t" << rsq << "\t";
             } else {
-                writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << gmean/2.0 << "\t" ;
+                writeout << snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t" << gmean/2.0 << "\t" << mac << "\t" << rsq << "\t";
                 std::vector<double> strata_range(strataList_size);
                 for (int strata_idx = 0; strata_idx < strataList_size; strata_idx++) {
                       uvec strata_tmp = as<arma::uvec>(strata_list[strata_idx]);
@@ -990,12 +906,15 @@ extern "C"
             }
            }
           double AF= gmean / 2.0; // convert mean to allele freq
-          if(((double)nmiss/n>missrate) || ((AF<minmaf || AF>maxmaf) && (AF<1-maxmaf || AF>1-minmaf))) { // monomorphic, missrate, MAF
+          if(((double)nmiss/n>missrate) || (mac<minmac) || (rsq<minrsq) || ((AF<minmaf || AF>maxmaf) && (AF<1-maxmaf || AF>1-minmaf))) { // monomorphic, missrate, MAF, MAC, Rsq
             snp_skip[npbidx] = 1;           
           } else {
-            G.col(npbidx) = g;
-          }
-        }
+	    if (!isDupeID){
+	      G.col(npbidx) = J.t()*g;
+	    } else {
+	      G.col(npbidx) = g;
+            }
+	  }
 
         tmpout[npbidx] = writeout.str();
         writeout.clear();
@@ -1003,7 +922,7 @@ extern "C"
                 
         if((m+1 == end) || (npbidx == npb)) {          
           if (npbidx != npb) {
-            G.reshape(n, npbidx);
+            G.reshape(n_obs, npbidx);
             snp_skip = snp_skip.rows(0,npbidx-1);
           }
           uvec snp_idx = find(snp_skip == 0);
@@ -1121,11 +1040,15 @@ extern "C"
           int ng_j = 0;
           for(size_t j=0; j<npbidx; ++j) {
             if(snp_skip[j] == 1) { // monomorphic, missrate, MAF
-              writefile << tmpout[j] << "NA\tNA\tNA\tNA\tNA\tNA";
+              writefile << tmpout[j] << "NA\tNA\tNA\tNA\tNA\tNA\tNA";
               if (metaOutput) {
-               for (int e=0; e < (ei+qi + ei+qi + ((ei+qi) * (ei+qi - 1) / 2)); e++) {
-                 writefile << "\tNA";
-                } 
+               for (int e=0; e < (ei+qi + ei+qi + ((ei+qi) * (ei+qi + 1) / 2)); e++) {
+		 //if(e == 0) {
+		 //writefile << "NA";
+		 //} else {
+		   writefile << "\tNA";
+		   //}
+               } 
               }
               writefile << "\n";
             } 
@@ -1239,7 +1162,7 @@ extern "C"
           
           npbidx = 0; 
           snp_skip.zeros();
-          G.reshape(n, npb);
+          G.reshape(n_obs, npb);
           
         }
         if((m+1) % 100000 == 0) {writefile << flush;}
