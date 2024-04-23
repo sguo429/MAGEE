@@ -39,7 +39,7 @@ morekeywords={}
 \begin{document}
 \SweaveOpts{concordance=TRUE}
 \title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.4.0}
-\date{April XX, 2024}
+\date{April 23, 2024}
 \author{Xinyu Wang\\Human Genetics Center\\Dept. of Biostatistics and Data Science\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Xinyu.Wang@uth.tmc.edu\\\\Han Chen\\Human Genetics Center\\Department of Epidemiology\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Han.Chen.2@uth.tmc.edu\\\\Duy Pham\\Human Genetics Center\\Department of Epidemiology\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: duy.t.pham@uth.tmc.edu\\\\Kenneth Westerman\\Department of Medicine\\Clinical and Translational Epidemiology Unit\\Mongan Institute\\Massachusetts General Hospital\\Email: KEWESTERMAN@mgh.harvard.edu\\\\Cong Pan\\Human Genetics Center\\Department of Epidemiology\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: cong.pan@uth.tmc.edu} 
 
 \maketitle
@@ -487,7 +487,7 @@ Initial public release of \textit{MAGEE}.
 \item Removed the "usernames" option for xcolor.sty.
 \end{enumerate}
 
-\subsection{Version 1.4.0 (April XX, 2024)}
+\subsection{Version 1.4.0 (April 23, 2024)}
 \begin{enumerate}
 \item Added a new argument "covar.center" in \textbf{glmm.gei} to allow users to control whether and how the covariates (including exposures) should be centered.
 \item Fixed a bug in reading BGEN files in \textbf{glmm.gei}. A sample file is expected to overwrite (possibly reshuffled) sample IDs in the BGEN file (thanks to: Simon Wiegrebe and Thomas Winkler).
@@ -496,6 +496,8 @@ Initial public release of \textit{MAGEE}.
 \item Fixed several minor bugs in the output for BGEN files in \textbf{glmm.gei}. An extra tab between "AF" and "Beta\_Marginal" was removed. The empty second row was removed. Three incorrect columns for continuous exposures were removed (thanks to: Simon Wiegrebe and Thomas Winkler).
 \item Improved error control for negative variances in \textbf{glmm.gei}.
 \item Added minor allele count and Rsq filters in \textbf{glmm.gei} (thanks to: Simon Wiegrebe and Thomas Winkler).
+\item Added support for imputed dosage GDS files (in the node annotation/format/DS/data).
+\item Fixed a minor bug in output header names in \textbf{glmm.gei.meta} (thanks to: Christopher Bryan).
 \end{enumerate}
 
 \section{Contact}
