@@ -502,7 +502,7 @@ Initial public release of \textit{MAGEE}.
 
 \subsection{Version 1.4.1 (April 28, 2024)}
 \begin{enumerate}
-\item Removed ARMA_DONT_PRINT_ERRORS in fitglmm.cpp (which was deprecated in RcppArmadillo version 0.11.2.1.0) and fixed minor bugs identified in the tests for link-time optimization type mismatches (thanks to: Prof. Brian Ripley).
+\item Removed "ARMA\_DONT\_PRINT\_ERRORS" in fitglmm.cpp (which was deprecated in RcppArmadillo version 0.11.2.1.0) and fixed minor bugs identified in the tests for link-time optimization type mismatches (thanks to: Prof. Brian Ripley).
 \end{enumerate}
 
 \section{Contact}
