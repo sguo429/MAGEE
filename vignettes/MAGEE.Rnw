@@ -38,8 +38,8 @@ morekeywords={}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
-\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.4.0}
-\date{April 23, 2024}
+\title{MAGEE: Mixed Model Association Test for GEne-Environment Interaction\\Version 1.4.1}
+\date{April 28, 2024}
 \author{Xinyu Wang\\Human Genetics Center\\Dept. of Biostatistics and Data Science\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Xinyu.Wang@uth.tmc.edu\\\\Han Chen\\Human Genetics Center\\Department of Epidemiology\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: Han.Chen.2@uth.tmc.edu\\\\Duy Pham\\Human Genetics Center\\Department of Epidemiology\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: duy.t.pham@uth.tmc.edu\\\\Kenneth Westerman\\Department of Medicine\\Clinical and Translational Epidemiology Unit\\Mongan Institute\\Massachusetts General Hospital\\Email: KEWESTERMAN@mgh.harvard.edu\\\\Cong Pan\\Human Genetics Center\\Department of Epidemiology\\School of Public Health\\The University of Texas Health Science Center at Houston\\Email: cong.pan@uth.tmc.edu} 
 
 \maketitle
@@ -498,6 +498,11 @@ Initial public release of \textit{MAGEE}.
 \item Added minor allele count and Rsq filters in \textbf{glmm.gei} (thanks to: Simon Wiegrebe and Thomas Winkler).
 \item Added support for imputed dosage GDS files (in the node annotation/format/DS/data).
 \item Fixed a minor bug in output header names in \textbf{glmm.gei.meta} (thanks to: Christopher Bryan).
+\end{enumerate}
+
+\subsection{Version 1.4.1 (April 28, 2024)}
+\begin{enumerate}
+\item Removed ARMA_DONT_PRINT_ERRORS in fitglmm.cpp (which was deprecated in RcppArmadillo version 0.11.2.1.0) and fixed minor bugs identified in the tests for link-time optimization type mismatches (thanks to: Prof. Brian Ripley).
 \end{enumerate}
 
 \section{Contact}
