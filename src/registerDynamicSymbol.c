@@ -2,10 +2,10 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
-SEXP glmm_gei_bgen11(SEXP res_in, SEXP P_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP missrate_in, SEXP miss_method_in, SEXP nperbatch_in, 
+SEXP glmm_gei_bgen11(SEXP res_in, SEXP P_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP minmac_in, SEXP missrate_in, SEXP minrsq_in, SEXP miss_method_in, SEXP nperbatch_in, 
                      SEXP ei_in, SEXP qi_in, SEXP isNullP_in, SEXP isNullEC_in, SEXP strata_in, SEXP select_in, SEXP begin_in, SEXP end_in, SEXP pos_in, SEXP nbgen_in, SEXP compression_in, SEXP metaOutput_in);
 
-SEXP glmm_gei_bgen13(SEXP res_in, SEXP P_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP missrate_in, SEXP miss_method_in, SEXP nperbatch_in, 
+SEXP glmm_gei_bgen13(SEXP res_in, SEXP P_in, SEXP bgenfile_in, SEXP outfile_in, SEXP center_in, SEXP minmaf_in, SEXP maxmaf_in, SEXP minmac_in, SEXP missrate_in, SEXP minrsq_in, SEXP miss_method_in, SEXP nperbatch_in, 
                      SEXP ei_in, SEXP qi_in, SEXP isNullP_in, SEXP isNullEC_in, SEXP strata_in, SEXP select_in, SEXP begin_in, SEXP end_in, SEXP pos_in, SEXP nbgen_in, SEXP compression_in, SEXP metaOutput_in);
 
 SEXP bgenHeader(SEXP bgenfile_in);

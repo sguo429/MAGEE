@@ -1,5 +1,5 @@
 /*  MAGEE : An R Package for Mixed Model Association Test for GEne-Environment Interaction
- *  Copyright (C) 2020--2023  Xinyu Wang, Han Chen, Duy T. Pham
+ *  Copyright (C) 2020--2024  Xinyu Wang, Han Chen, Duy T. Pham
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  */
 
 
-#define ARMA_DONT_PRINT_ERRORS
 #include <fstream>
 #include <cmath>
 #include <cstring>
@@ -330,7 +329,6 @@ extern "C"
           gmean/=(double)(n-nmiss);                                
 	  gsqmean/=(double)(n-nmiss);
 	  rsq = (gsqmean - gmean * gmean) * (double)(n-nmiss) / (double)(n-nmiss-1) / (gmean * (1.0 - gmean/2.0));
-          double missRate = nmiss / (double)(n * 1.0);
 
            if (skip_strata) {
 	     writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t"<< gmean/2.0 << "\t" << mac << "\t" << rsq << "\t";
@@ -874,7 +872,6 @@ extern "C"
         gmean/=(double)(n-nmiss);
 	gsqmean/=(double)(n-nmiss);
 	rsq = (gsqmean - gmean * gmean) * (double)(n-nmiss) / (double)(n-nmiss-1) / (gmean * (1.0 - gmean/2.0));
-        double missRate = nmiss / (double)(n * 1.0);
      
            if (skip_strata) {
               writeout << str_snpID << "\t" << rsID << "\t" << chrStr << "\t" << physpos_tmp << "\t" << allele1 << "\t" << allele0 << "\t" << (n-nmiss) << "\t"<< gmean/2.0 << "\t" << mac << "\t" << rsq << "\t";
