@@ -1,4 +1,4 @@
-MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep = "\t", bgen.samplefile = NULL, interaction.covariates = NULL, meta.file.prefix = NULL, MAF.range = c(1e-7, 0.5), AF.strata.range = c(0, 1), MAF.weights.beta = c(1, 25), miss.cutoff = 1, missing.method = "impute2mean", method = "davies", tests = "JF", use.minor.allele = FALSE, auto.flip = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1){
+MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep = "\t", bgen.samplefile = NULL, interaction.covariates = NULL, meta.file.prefix = NULL, covar.center="interaction.covariates.only", MAF.range = c(1e-7, 0.5), AF.strata.range = c(0, 1), MAF.weights.beta = c(1, 25), miss.cutoff = 1, missing.method = "impute2mean", method = "davies", tests = "JF", use.minor.allele = FALSE, auto.flip = FALSE, Garbage.Collection = FALSE, is.dosage = FALSE, ncores = 1){
   if(Sys.info()["sysname"] == "Windows" && ncores > 1) {
     warning("The package doMC is not available on Windows... Switching to single thread...", call. = FALSE)
     ncores <- 1
@@ -6,6 +6,8 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
   if(!grepl("\\.gds$|\\.bgen$", geno.file[1])) stop("Error: only .gds and .bgen format is supported in geno.file!")
   if(!inherits(null.obj,  c("glmmkin", "glmmkin.multi"))) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
   n.pheno <- null.obj$n.pheno
+  covar.center <- try(match.arg(covar.center, c("none", "all", "interaction.covariates.only")))
+  if(inherits(covar.center,"try-error")) stop("Error: \"covar.center\" must be one of the following: \"none\", \"all\", \"interaction.covariates.only\".")
   missing.method <- try(match.arg(missing.method, c("impute2mean", "impute2zero")))
   if(inherits(missing.method, "try-error")) stop("Error: \"missing.method\" must be \"impute2mean\" or \"impute2zero\".")
   if(any(!tests %in% c("MV", "MF", "IV", "IF", "JV", "JF", "JD"))) stop("Error: \"tests\" should only include \"MV\" for the main effect variance component test, \"MF\" for the main effect combined test of the burden and variance component tests using Fisher\'s method, \"IV\" for the interaction variance component test, \"IF\" for the interaction combined test of the burden and variance component tests using Fisher\'s method, \"JV\" for the joint variance component test for main effect and interaction, \"JF\" for the joint combined test of the burden and variance component tests for main effect and interaction using Fisher\'s method, or \"JD\" for the joint combined test of the burden and variance component tests for main effect and interaction using double Fisher\'s method.")
@@ -58,7 +60,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       J <- t(sparseMatrix(i=1:length(null.obj$id_include), j=match(null.obj$id_include, unique(null.obj$id_include)[match(sample.id, unique(null.obj$id_include))]), x=1))
     } else match.id <- match(sample.id, null.obj$id_include)
     E <- as.matrix(E[match.id, , drop = FALSE])
-    E <- scale(E, scale = FALSE)
+    if(covar.center == "all") {
+      E <- scale(E, scale = FALSE)
+    } else if(covar.center != "none") {
+      if(!is.null(interaction.covariates)) {
+        E <- cbind(E[,1:ei,drop=F], scale(E[,(1+ei):(qi+ei),drop=F], scale = FALSE))
+      }
+    }
     if(inherits(null.obj, "glmmkin.multi")) {
       residuals <- residuals[match.id, , drop = FALSE]
       match.id <- rep(match.id, n.pheno) + rep((0:(n.pheno-1))*n, each = length(match.id))
@@ -570,7 +578,13 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       J <- t(sparseMatrix(i=1:length(null.obj$id_include), j=match(null.obj$id_include, unique(null.obj$id_include)[match(sample.id, unique(null.obj$id_include))]), x=1))
     } else match.id <- match(sample.id, null.obj$id_include)
     E <- as.matrix(E[match.id, , drop = FALSE])
-    E <- scale(E, scale = FALSE)
+    if(covar.center == "all") {
+      E <- scale(E, scale = FALSE)
+    } else if(covar.center != "none") {
+      if(!is.null(interaction.covariates)) {
+        E <- cbind(E[,1:ei,drop=F], scale(E[,(1+ei):(qi+ei),drop=F], scale = FALSE))
+      }
+    }
     if(inherits(null.obj, "glmmkin.multi")) {
       residuals <- residuals[match.id, , drop = FALSE]
       match.id <- rep(match.id, n.pheno) + rep((0:(n.pheno-1))*n, each = length(match.id))
