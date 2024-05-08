@@ -64,7 +64,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       E <- scale(E, scale = FALSE)
     } else if(covar.center != "none") {
       if(!is.null(interaction.covariates)) {
-        E <- cbind(E[,1:ei,drop=F], scale(E[,(1+ei):(qi+ei),drop=F], scale = FALSE))
+        E <- cbind(scale(E[,1:qi,drop=F], scale = FALSE), E[,(1+qi):(qi+ei),drop=F])
       }
     }
     if(inherits(null.obj, "glmmkin.multi")) {
@@ -582,7 +582,7 @@ MAGEE <- function(null.obj, interaction, geno.file, group.file, group.file.sep =
       E <- scale(E, scale = FALSE)
     } else if(covar.center != "none") {
       if(!is.null(interaction.covariates)) {
-        E <- cbind(E[,1:ei,drop=F], scale(E[,(1+ei):(qi+ei),drop=F], scale = FALSE))
+        E <- cbind(scale(E[,1:qi,drop=F], scale = FALSE), E[,(1+qi):(qi+ei),drop=F])
       }
     }
     if(inherits(null.obj, "glmmkin.multi")) {
@@ -1148,10 +1148,12 @@ fisher_pval <- function(p) {
   pchisq(-2*sum(log(p)), df = 2*length(p), lower.tail = FALSE)
 }
 
-MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction.covariates = NULL, group.file.sep = "\t", auto.flip = FALSE)
+MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction.covariates = NULL, covar.center="interaction.covariates.only", group.file.sep = "\t", auto.flip = FALSE)
 {
   if(!grepl("\\.gds$", geno.file[1])) stop("Error: currently only .gds format is supported in geno.file for MAGEE.prep!")
   if(!inherits(null.obj, c("glmmkin", "glmmkin.multi"))) stop("Error: null.obj must be a class glmmkin or glmmkin.multi object!")
+  covar.center <- try(match.arg(covar.center, c("none", "all", "interaction.covariates.only")))
+  if(inherits(covar.center,"try-error")) stop("Error: \"covar.center\" must be one of the following: \"none\", \"all\", \"interaction.covariates.only\".")
   n.pheno <- null.obj$n.pheno
   residuals <- null.obj$scaled.residuals
   n <- length(unique(null.obj$id_include))
@@ -1199,7 +1201,13 @@ MAGEE.prep <- function(null.obj, interaction, geno.file, group.file, interaction
     J <- NULL
   }
   E <- as.matrix(E[match.id, , drop = FALSE])
-  E <- scale(E, scale = FALSE)
+  if(covar.center == "all") {
+      E <- scale(E, scale = FALSE)
+    } else if(covar.center != "none") {
+      if(!is.null(interaction.covariates)) {
+        E <- cbind(scale(E[,1:qi,drop=F], scale = FALSE), E[,(1+qi):(qi+ei),drop=F])
+      }
+    }
   if(inherits(null.obj, "glmmkin.multi")) {
     residuals <- residuals[match.id, , drop = FALSE]
     match.id <- rep(match.id, n.pheno) + rep((0:(n.pheno-1))*n, each = length(match.id))
